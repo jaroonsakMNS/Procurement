@@ -10,6 +10,7 @@ import JobDetails from './components/jobs/JobDetails'
 import InventoryDashboard from './components/inventory/InventoryDashboard'
 import StoreCatalog from './components/store/StoreCatalog'
 import PendingPurchaseBoard from './components/procurement/PendingPurchaseBoard'
+import JobEquipmentStatusReport from './components/reports/JobEquipmentStatusReport'
 import VendorDirectory from './components/vendors/VendorDirectory'
 import {
   computeKpis,
@@ -152,14 +153,14 @@ export default function App() {
     setPendingItems((current) => {
       let id = nextPendingId(current)
       const extras = parts
-        .filter((part) => part.status === 'pending_order')
+        .filter((part) => part.status === 'pending_order' && part.qty - part.storeQty > 0)
         .map((part) => ({
           id: id++,
           jobId: job.jobId,
           mnsPartNo: part.mnsPartNo,
           partNo: part.partNo,
           description: part.description,
-          qty: Math.max(part.qty - part.storeQty, part.qty),
+          qty: part.qty - part.storeQty,
           unitPrice: part.unitPrice,
           status: 'pending' as const,
         }))
@@ -191,9 +192,10 @@ export default function App() {
     }
 
     const selectedParts = equipment.filter((item) => partIds.includes(item.id))
+    const shortageParts = selectedParts.filter((part) => part.qty - part.storeQty > 0)
     setPendingItems((current) => {
       let id = nextPendingId(current)
-      const extras = selectedParts
+      const extras = shortageParts
         .filter(
           (part) =>
             !current.some(
@@ -207,13 +209,17 @@ export default function App() {
           mnsPartNo: part.mnsPartNo,
           partNo: part.partNo,
           description: part.description,
-          qty: Math.max(part.qty - part.storeQty, 1),
+          qty: part.qty - part.storeQty,
           unitPrice: part.unitPrice,
           status: 'pending' as const,
         }))
       return [...current, ...extras]
     })
-    setPoNotice(`ส่ง ${selectedParts.length} รายการไปยังรายการรอจัดซื้อแล้ว`)
+    setPoNotice(
+      shortageParts.length === 0
+        ? 'รายการที่เลือกมีของในคลังครบแล้ว ไม่ได้ส่งไปรอจัดซื้อ'
+        : `ส่ง ${shortageParts.length} รายการที่ขาดไปยังรายการรอจัดซื้อแล้ว`,
+    )
   }
 
   function handleGeneratePo(
@@ -367,11 +373,26 @@ export default function App() {
   return (
     <DashboardLayout searchQuery={searchQuery} onSearchChange={setSearchQuery}>
       <div className="mx-auto max-w-[90rem] space-y-6">
-        <KpiCards kpis={kpis} />
+        <div id="dashboard" className="scroll-mt-24">
+          <KpiCards kpis={kpis} />
+        </div>
+
+        <JobEquipmentStatusReport
+          jobs={jobs}
+          equipment={equipment}
+          pendingItems={pendingItems}
+          purchaseOrders={purchaseOrders}
+          inventory={inventory}
+        />
 
         <InventoryDashboard items={inventory} />
         <StoreCatalog items={inventory} jobs={jobs} onSubmit={handleRequisition} />
-        <PendingPurchaseBoard items={pendingItems} vendors={vendors} onGeneratePo={handleGeneratePo} />
+        <PendingPurchaseBoard
+          items={pendingItems}
+          jobs={jobs}
+          vendors={vendors}
+          onGeneratePo={handleGeneratePo}
+        />
         <VendorDirectory
           vendors={vendors}
           onSave={handleSaveVendor}
