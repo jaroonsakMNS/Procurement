@@ -1,0 +1,58 @@
+import type { Vendor } from '../types/procurement'
+
+export const vendors: Vendor[] = [
+  {
+    id: 'VEN-001',
+    name: 'บจก. สยามสตีล',
+    contactPerson: 'คุณวิชัย เหล็กดี',
+    phone: '02-111-2001',
+    email: 'sales@siamsteel.example',
+    address: '99 ถ.พระราม 2 เขตบางขุนเทียน กรุงเทพฯ 10150',
+    taxId: '0105558123001',
+  },
+  {
+    id: 'VEN-002',
+    name: 'หจก. นครปูนซีเมนต์',
+    contactPerson: 'คุณศิริ ปูนขาว',
+    phone: '02-222-3400',
+    email: 'order@nakorncement.example',
+    address: '12 นิคมอุตสาหกรรมบางปะกง ฉะเชิงเทรา 24130',
+    taxId: '0125556002218',
+  },
+  {
+    id: 'VEN-003',
+    name: 'บจก. ไทยไลท์ติ้ง',
+    contactPerson: 'คุณนภา แสงทอง',
+    phone: '02-333-1188',
+    email: 'contact@thailighting.example',
+    address: '88 ถ.ลาดพร้าว เขตวังทองหลาง กรุงเทพฯ 10310',
+    taxId: '0105559011452',
+  },
+  {
+    id: 'VEN-004',
+    name: 'บจก. กรีนวู้ด ซัพพลาย',
+    contactPerson: 'คุณประยุทธ์ ไม้เขียว',
+    phone: '02-444-7722',
+    email: 'sales@greenwood.example',
+    address: '45 หมู่ 3 ต.คลองหนึ่ง คลองหลวง ปทุมธานี 12120',
+    taxId: '0135554008891',
+  },
+  {
+    id: 'VEN-005',
+    name: 'บจก. เอเชียกลาส',
+    contactPerson: 'คุณอรทัย แก้วใส',
+    phone: '02-555-9090',
+    email: 'asia@asiaglass.example',
+    address: '21 บางนา-ตราด กม.16 สมุทรปราการ 10540',
+    taxId: '0115557003344',
+  },
+  {
+    id: 'VEN-006',
+    name: 'บจก. เมทัลเวิร์ค ไทย',
+    contactPerson: 'คุณสมบูรณ์ เหล็กกล',
+    phone: '02-666-2211',
+    email: 'po@metalworkthai.example',
+    address: '7 ซอยสุขสวัสดิ์ 30 เขตราษฎร์บูรณะ กรุงเทพฯ 10140',
+    taxId: '0105552201789',
+  },
+]
