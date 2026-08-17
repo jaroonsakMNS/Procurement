@@ -1,5 +1,5 @@
 import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { formatCurrency } from '../../lib/format'
 import type { CartLine, InventoryItem, VendorJob } from '../../types/procurement'
 import StatusBadge from '../dashboard/StatusBadge'
@@ -15,6 +15,12 @@ export default function StoreCatalog({ items, jobs, onSubmit }: StoreCatalogProp
   const [jobId, setJobId] = useState(jobs[0]?.jobId ?? '')
   const [cart, setCart] = useState<CartLine[]>([])
   const [notice, setNotice] = useState('')
+
+  useEffect(() => {
+    if (!jobs.some((job) => job.jobId === jobId)) {
+      setJobId(jobs[0]?.jobId ?? '')
+    }
+  }, [jobs, jobId])
 
   const catalog = useMemo(() => {
     const normalized = query.trim().toLowerCase()

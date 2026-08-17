@@ -234,7 +234,7 @@ export default function VendorComparisonForm({
                                     [part.id]: {
                                       ...current[part.id],
                                       [slot]: {
-                                        ...current[part.id][slot],
+                                        ...(current[part.id]?.[slot] ?? { unitPrice: 0, leadDays: 0 }),
                                         unitPrice: Number(event.target.value) || 0,
                                       },
                                     },
@@ -255,7 +255,7 @@ export default function VendorComparisonForm({
                                     [part.id]: {
                                       ...current[part.id],
                                       [slot]: {
-                                        ...current[part.id][slot],
+                                        ...(current[part.id]?.[slot] ?? { unitPrice: 0, leadDays: 0 }),
                                         leadDays: Number(event.target.value) || 0,
                                       },
                                     },

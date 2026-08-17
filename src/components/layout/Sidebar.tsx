@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   ClipboardList,
   Cpu,
   FileText,
@@ -15,6 +16,7 @@ import {
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'แดชบอร์ด', hint: 'Dashboard', icon: LayoutDashboard },
+  { id: 'job-status-report', label: 'ติดตามอุปกรณ์', hint: 'Job Status', icon: BarChart3 },
   { id: 'inventory', label: 'คลังสินค้า', hint: 'Warehouse', icon: Warehouse },
   { id: 'store', label: 'ร้านค้าภายใน', hint: 'Internal Store', icon: ShoppingBag },
   { id: 'pending-purchase', label: 'รอจัดซื้อ', hint: 'Pending Purchase', icon: Truck },

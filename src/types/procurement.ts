@@ -8,12 +8,19 @@ export type EquipmentOrderStatus = 'ordered' | 'pending_order' | 'received' | 'i
 
 export type PendingPurchaseStatus = 'pending' | 'on_po'
 
+export type JobPartTrackStatus =
+  | 'pending_quote'
+  | 'po_issued'
+  | 'delivered_pending_payment'
+  | 'ready_for_use'
+
 export type StatusKey =
   | JobStatus
   | PoStage
   | DeliveryProgress
   | EquipmentOrderStatus
   | PendingPurchaseStatus
+  | JobPartTrackStatus
   | 'overdue'
   | 'low_stock'
   | 'in_stock'

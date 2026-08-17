@@ -77,6 +77,22 @@ const STATUS_MAP: Record<StatusKey, { label: string; className: string }> = {
     label: 'ของหมด',
     className: 'bg-rose-50 text-rose-700 ring-rose-200',
   },
+  pending_quote: {
+    label: 'กำลังเสนอราคา',
+    className: 'bg-amber-50 text-amber-800 ring-amber-200',
+  },
+  po_issued: {
+    label: 'สั่งซื้อแล้ว/รอรับของ',
+    className: 'bg-sky-50 text-sky-800 ring-sky-200',
+  },
+  delivered_pending_payment: {
+    label: 'รับของแล้ว/รอจ่ายเงิน',
+    className: 'bg-indigo-50 text-indigo-800 ring-indigo-200',
+  },
+  ready_for_use: {
+    label: 'พร้อมใช้',
+    className: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+  },
 }
 
 interface StatusBadgeProps {
