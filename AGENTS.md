@@ -15,7 +15,9 @@
 
 ### Running / building (no lint or test setup)
 
-- Standard commands are defined in `package.json` scripts; there is **no lint script and no test suite** in this repo.
+- Use **npm** (`package-lock.json` is present). There is **no lint script and no test suite**.
+  - `npm ci` — install from the lockfile (preferred after checkout).
+  - `npm install` — fallback if `package-lock.json` is missing.
   - `npm run dev` — Vite dev server on `http://localhost:5173/` (hot reload).
   - `npm run build` — type-checks with `tsc --noEmit` then `vite build` (this doubles as the "lint"/static-check step since TypeScript runs in `strict` mode with `noUnusedLocals`/`noUnusedParameters`).
   - `npm run preview` — serves the production build.
