@@ -1,13 +1,18 @@
 import { useMemo, useState } from 'react'
 import { formatCurrency } from '../../lib/format'
-import type { PendingPurchaseItem, Vendor } from '../../types/procurement'
+import type { PendingPurchaseItem, Vendor, VendorPriceComparison } from '../../types/procurement'
 import StatusBadge from '../dashboard/StatusBadge'
 import VendorComparisonForm from './VendorComparisonForm'
 
 interface PendingPurchaseBoardProps {
   items: PendingPurchaseItem[]
   vendors: Vendor[]
-  onGeneratePo: (pendingIds: number[], vendorId: string, quotedPrices: Record<number, number>) => string
+  onGeneratePo: (
+    pendingIds: number[],
+    vendorId: string,
+    quotedPrices: Record<number, number>,
+    comparison: VendorPriceComparison,
+  ) => string
 }
 
 export default function PendingPurchaseBoard({ items, vendors, onGeneratePo }: PendingPurchaseBoardProps) {
@@ -122,8 +127,8 @@ export default function PendingPurchaseBoard({ items, vendors, onGeneratePo }: P
         parts={selectedParts}
         vendors={vendors}
         onClose={() => setCompareOpen(false)}
-        onGeneratePo={(vendorId, quotedPrices) => {
-          const message = onGeneratePo(selectedIds, vendorId, quotedPrices)
+        onGeneratePo={(vendorId, quotedPrices, comparison) => {
+          const message = onGeneratePo(selectedIds, vendorId, quotedPrices, comparison)
           setNotice(message)
           setSelectedIds([])
           setCompareOpen(false)

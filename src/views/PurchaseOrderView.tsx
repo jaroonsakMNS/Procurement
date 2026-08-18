@@ -1,13 +1,15 @@
-import { useState } from 'react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import PurchaseOrderBoard from '../components/dashboard/PurchaseOrderBoard'
 import PendingPurchaseBoard from '../components/procurement/PendingPurchaseBoard'
+import PurchaseOrderPreviewModal from '../components/procurement/PurchaseOrderPreviewModal'
 import VendorDirectory from '../components/vendors/VendorDirectory'
 import { matchesQuery } from '../lib/format'
 import type {
   PendingPurchaseItem,
+  PoStage,
   PurchaseOrder,
   Vendor,
+  VendorPriceComparison,
 } from '../types/procurement'
 
 interface PurchaseOrderViewProps {
@@ -19,8 +21,9 @@ interface PurchaseOrderViewProps {
     pendingIds: number[],
     vendorId: string,
     quotedPrices: Record<number, number>,
+    comparison: VendorPriceComparison,
   ) => string
-  onMarkDelivered: (poNumber: string) => void
+  onUpdatePoStage: (poNumber: string, nextStage: PoStage) => void
   onSaveVendor: (vendor: Omit<Vendor, 'id'> & { id?: string }) => void
   onDeleteVendor: (vendorId: string) => void
 }
@@ -39,11 +42,12 @@ export default function PurchaseOrderView({
   vendors,
   searchQuery,
   onGeneratePo,
-  onMarkDelivered,
+  onUpdatePoStage,
   onSaveVendor,
   onDeleteVendor,
 }: PurchaseOrderViewProps) {
   const [activeTab, setActiveTab] = useState<TabId>('pending')
+  const [previewPo, setPreviewPo] = useState<PurchaseOrder | null>(null)
 
   const filteredOrders = useMemo(
     () =>
@@ -90,7 +94,8 @@ export default function PurchaseOrderView({
       {activeTab === 'orders' && (
         <PurchaseOrderBoard
           purchaseOrders={filteredOrders}
-          onMarkDelivered={onMarkDelivered}
+          onUpdateStage={onUpdatePoStage}
+          onPreview={setPreviewPo}
         />
       )}
       {activeTab === 'vendors' && (
@@ -100,6 +105,8 @@ export default function PurchaseOrderView({
           onDelete={onDeleteVendor}
         />
       )}
+
+      <PurchaseOrderPreviewModal purchaseOrder={previewPo} onClose={() => setPreviewPo(null)} />
     </div>
   )
 }

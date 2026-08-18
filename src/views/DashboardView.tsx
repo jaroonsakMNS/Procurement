@@ -1,6 +1,9 @@
 import { ArrowRight } from 'lucide-react'
+import { useMemo } from 'react'
 import DonutChart from '../components/charts/DonutChart'
+import MonthlySpendingChart from '../components/charts/MonthlySpendingChart'
 import StockProgress from '../components/charts/StockProgress'
+import AlertFeed, { type AlertFeedItem } from '../components/dashboard/AlertFeed'
 import KpiCards from '../components/dashboard/KpiCards'
 import StatusBadge from '../components/dashboard/StatusBadge'
 import { formatCurrency, formatDate, isOverdue } from '../lib/format'
@@ -21,8 +24,8 @@ interface DashboardViewProps {
   inventory: InventoryItem[]
   pendingItems: PendingPurchaseItem[]
   pendingPayments: PendingPayment[]
+  paidPayments: PendingPayment[]
   pendingDeliveries: PendingDelivery[]
-  paidPoNumbers: string[]
   onNavigate: (view: string) => void
 }
 
@@ -88,7 +91,8 @@ export default function DashboardView({
   purchaseOrders,
   inventory,
   pendingPayments,
-  paidPoNumbers,
+  paidPayments,
+  pendingDeliveries,
   onNavigate,
 }: DashboardViewProps) {
   const jobSegments = JOB_CHART_SEGMENTS.map((s) => ({
@@ -106,19 +110,85 @@ export default function DashboardView({
     .sort((a, b) => (a.currentStock / Math.max(a.minStock, 1)) - (b.currentStock / Math.max(b.minStock, 1)))
     .slice(0, 6)
 
-  const activePendingPayments = pendingPayments.filter((p) => !paidPoNumbers.includes(p.poNumber))
-  const overduePayments = activePendingPayments.filter((p) => isOverdue(p.dueDate))
-  const totalOutstanding = activePendingPayments.reduce((sum, p) => sum + p.amount, 0)
+  const overduePayments = pendingPayments.filter((p) => isOverdue(p.dueDate))
+  const totalOutstanding = pendingPayments.reduce((sum, p) => sum + p.amount, 0)
+  const recentPaid = paidPayments.slice(0, 2)
 
   const recentJobs = [...jobs].slice(0, 5)
   const recentOrders = [...purchaseOrders].slice(0, 4)
+
+  const monthlySpending = useMemo(() => {
+    const labels = ['Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
+    const totals = new Map(labels.map((label) => [label, 0]))
+    for (const po of purchaseOrders) {
+      const createdDate = po.createdDate ?? '2026-08-01'
+      const monthLabel = new Date(`${createdDate}T00:00:00`).toLocaleDateString('en-US', {
+        month: 'short',
+      })
+      totals.set(monthLabel, (totals.get(monthLabel) ?? 0) + po.amount)
+    }
+    return labels.map((monthLabel) => ({ monthLabel, total: totals.get(monthLabel) ?? 0 }))
+  }, [purchaseOrders])
+
+  const alertFeed = useMemo<AlertFeedItem[]>(() => {
+    const items: AlertFeedItem[] = []
+    inventory
+      .filter((item) => item.currentStock <= item.minStock)
+      .slice(0, 2)
+      .forEach((item) => {
+        items.push({
+          id: `stock-${item.sku}`,
+          title: `Low stock: ${item.partNo}`,
+          detail: `คงเหลือ ${item.currentStock} ${item.unit} ต่ำกว่า Min ${item.minStock}`,
+          level: item.currentStock <= 0 ? 'high' : 'medium',
+          type: 'stock',
+        })
+      })
+
+    overduePayments.slice(0, 2).forEach((payment) => {
+      items.push({
+        id: `payment-${payment.poNumber}`,
+        title: `Overdue payment: ${payment.poNumber}`,
+        detail: `${payment.vendorName} · ครบกำหนด ${formatDate(payment.dueDate)}`,
+        level: 'high',
+        type: 'payment',
+      })
+    })
+
+    purchaseOrders
+      .filter((po) => po.stage === 'pending_approval')
+      .slice(0, 2)
+      .forEach((po) => {
+        items.push({
+          id: `approval-${po.poNumber}`,
+          title: `PO pending approval: ${po.poNumber}`,
+          detail: `${po.vendorName} · ${formatCurrency(po.amount)}`,
+          level: 'info',
+          type: 'approval',
+        })
+      })
+
+    pendingDeliveries
+      .filter((delivery) => isOverdue(delivery.expectedDate))
+      .slice(0, 2)
+      .forEach((delivery) => {
+        items.push({
+          id: `delivery-${delivery.id}`,
+          title: `Delivery overdue: ${delivery.poNumber}`,
+          detail: `กำหนดรับ ${formatDate(delivery.expectedDate)} · ${delivery.vendorName ?? 'ไม่ระบุร้านค้า'}`,
+          level: 'medium',
+          type: 'delivery',
+        })
+      })
+
+    return items.slice(0, 6)
+  }, [inventory, overduePayments, purchaseOrders, pendingDeliveries])
 
   return (
     <div className="space-y-6">
       <KpiCards kpis={kpis} />
 
-      {/* Charts row */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
 
         {/* Job Status Donut */}
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -143,7 +213,7 @@ export default function DashboardView({
         </div>
 
         {/* Low Stock Levels */}
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden md:col-span-2 xl:col-span-1">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <SectionHeader title="สต็อกที่ต้องจัดซื้อ" hint="Low Stock Alerts" viewId="inventory" onNavigate={onNavigate} />
           <div className="space-y-4 px-5 py-5">
             {lowStockItems.length === 0 ? (
@@ -162,12 +232,23 @@ export default function DashboardView({
             )}
           </div>
         </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden md:col-span-2 xl:col-span-1">
+          <SectionHeader title="การแจ้งเตือนสด" hint="Real-time Alert Feed" viewId="dashboard" onNavigate={onNavigate} />
+          <div className="px-5 py-5">
+            <AlertFeed items={alertFeed} />
+          </div>
+        </div>
       </div>
 
-      {/* Recent activity row */}
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.3fr_1fr]">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <SectionHeader title="ค่าใช้จ่ายรายเดือน" hint="Monthly Spending" viewId="po" onNavigate={onNavigate} />
+          <div className="px-5 py-5">
+            <MonthlySpendingChart points={monthlySpending} />
+          </div>
+        </div>
 
-        {/* Recent Jobs */}
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <SectionHeader title="งานล่าสุด" hint="Recent Jobs" viewId="jobs" onNavigate={onNavigate} />
           <div className="overflow-x-auto">
@@ -192,9 +273,7 @@ export default function DashboardView({
           </div>
         </div>
 
-        {/* Payments summary + Recent POs */}
         <div className="flex flex-col gap-5">
-          {/* Payments alert */}
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <SectionHeader title="ยอดค้างชำระ" hint="Outstanding Payments" viewId="payments" onNavigate={onNavigate} />
             <div className="grid grid-cols-2 divide-x divide-slate-100 px-0 py-4">
@@ -210,7 +289,7 @@ export default function DashboardView({
               </div>
             </div>
             <div className="divide-y divide-slate-100">
-              {activePendingPayments.slice(0, 3).map((p) => {
+              {pendingPayments.slice(0, 3).map((p) => {
                 const overdue = isOverdue(p.dueDate)
                 return (
                   <div key={p.poNumber} className={`flex items-center justify-between px-5 py-2.5 ${overdue ? 'bg-rose-50/40' : ''}`}>
@@ -228,7 +307,6 @@ export default function DashboardView({
             </div>
           </div>
 
-          {/* Recent POs */}
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <SectionHeader title="ใบสั่งซื้อล่าสุด" hint="Recent Purchase Orders" viewId="po" onNavigate={onNavigate} />
             <div className="divide-y divide-slate-100">
@@ -246,6 +324,29 @@ export default function DashboardView({
               ))}
             </div>
           </div>
+
+          {recentPaid.length > 0 ? (
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="border-b border-slate-100 px-5 py-4">
+                <h3 className="text-sm font-semibold text-slate-900">ชำระล่าสุด</h3>
+                <p className="text-xs text-slate-400">Recently paid invoices</p>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {recentPaid.map((payment) => (
+                  <div key={payment.poNumber} className="flex items-center justify-between px-5 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{payment.poNumber}</p>
+                      <p className="text-xs text-slate-500">{payment.vendorName}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-emerald-700">{formatCurrency(payment.amount)}</p>
+                      <p className="text-[11px] text-slate-400">{payment.paidDate ?? 'paid'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

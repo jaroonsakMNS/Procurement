@@ -11,10 +11,28 @@ const STAGES: Array<{ id: PoStage; title: string; hint: string }> = [
 
 interface PurchaseOrderBoardProps {
   purchaseOrders: PurchaseOrder[]
-  onMarkDelivered: (poNumber: string) => void
+  onUpdateStage: (poNumber: string, nextStage: PoStage) => void
+  onPreview: (purchaseOrder: PurchaseOrder) => void
 }
 
-export default function PurchaseOrderBoard({ purchaseOrders, onMarkDelivered }: PurchaseOrderBoardProps) {
+export default function PurchaseOrderBoard({
+  purchaseOrders,
+  onUpdateStage,
+  onPreview,
+}: PurchaseOrderBoardProps) {
+  function nextAction(stage: PoStage) {
+    switch (stage) {
+      case 'draft':
+        return { label: 'ส่งอนุมัติ', stage: 'pending_approval' as const }
+      case 'pending_approval':
+        return { label: 'ส่งให้ร้านค้า', stage: 'sent_to_vendor' as const }
+      case 'sent_to_vendor':
+        return { label: 'รับของเข้าคลัง', stage: 'delivered' as const }
+      default:
+        return null
+    }
+  }
+
   return (
     <section
       id="purchase-orders"
@@ -68,17 +86,26 @@ export default function PurchaseOrderBoard({ purchaseOrders, onMarkDelivered }: 
                         ))}
                       </ul>
                       <p className="mt-2 text-sm font-medium text-teal-700">{formatCurrency(po.amount)}</p>
-                      {po.stage !== 'delivered' ? (
+                      <div className="mt-3 space-y-2">
                         <button
                           type="button"
-                          onClick={() => onMarkDelivered(po.poNumber)}
-                          className="mt-2 w-full rounded-lg bg-teal-50 px-2 py-1.5 text-xs font-medium text-teal-800 hover:bg-teal-100"
+                          onClick={() => onPreview(po)}
+                          className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                         >
-                          รับของเข้าคลัง (Delivered)
+                          Preview / Print PO
                         </button>
-                      ) : (
-                        <p className="mt-2 text-[11px] text-emerald-700">Goods Receipt บันทึกแล้ว</p>
-                      )}
+                        {nextAction(po.stage) ? (
+                          <button
+                            type="button"
+                            onClick={() => onUpdateStage(po.poNumber, nextAction(po.stage)!.stage)}
+                            className="w-full rounded-lg bg-teal-50 px-2 py-1.5 text-xs font-medium text-teal-800 hover:bg-teal-100"
+                          >
+                            {nextAction(po.stage)?.label}
+                          </button>
+                        ) : (
+                          <p className="text-[11px] text-emerald-700">Goods Receipt บันทึกแล้ว</p>
+                        )}
+                      </div>
                     </article>
                   ))
                 )}

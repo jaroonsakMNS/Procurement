@@ -48,7 +48,6 @@ export default function JobsView({
     () =>
       equipment.filter(
         (item) =>
-          (item.status === 'ordered' || item.status === 'issued') &&
           matchesQuery(searchQuery, [item.jobId, item.mnsPartNo, item.partNo, item.description, item.status]),
       ),
     [equipment, searchQuery],
@@ -66,7 +65,7 @@ export default function JobsView({
         }}
       />
 
-      <JobOrderedEquipment items={filteredEquipment} />
+      <JobOrderedEquipment items={filteredEquipment} jobs={jobs} />
 
       {selectedJob ? (
         <JobDetails

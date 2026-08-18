@@ -54,6 +54,7 @@ export const purchaseOrders: PurchaseOrder[] = [
     vendorName: 'บจก. สยามสตีล',
     amount: 900,
     stage: 'draft',
+    createdDate: '2026-03-12',
     note: 'รายการอิเล็กทรอนิกส์หลายจ๊อบ',
     lines: [
       {
@@ -72,6 +73,7 @@ export const purchaseOrders: PurchaseOrder[] = [
     vendorName: 'บจก. เมทัลเวิร์ค ไทย',
     amount: 210000,
     stage: 'draft',
+    createdDate: '2026-04-08',
     lines: [
       {
         mnsPartNo: '041010-0101',
@@ -88,6 +90,7 @@ export const purchaseOrders: PurchaseOrder[] = [
     vendorName: 'หจก. นครปูนซีเมนต์',
     amount: 312400,
     stage: 'pending_approval',
+    createdDate: '2026-05-16',
     lines: [
       {
         mnsPartNo: '041010-0108',
@@ -105,6 +108,7 @@ export const purchaseOrders: PurchaseOrder[] = [
     vendorName: 'บจก. ไทยไลท์ติ้ง',
     amount: 3800,
     stage: 'pending_approval',
+    createdDate: '2026-06-04',
     lines: [
       {
         mnsPartNo: '022010-0044',
@@ -122,6 +126,8 @@ export const purchaseOrders: PurchaseOrder[] = [
     vendorName: 'บจก. กรีนวู้ด ซัพพลาย',
     amount: 97800,
     stage: 'sent_to_vendor',
+    createdDate: '2026-07-10',
+    sentDate: '2026-08-10',
     lines: [
       {
         mnsPartNo: '022010-0044',
@@ -139,6 +145,8 @@ export const purchaseOrders: PurchaseOrder[] = [
     vendorName: 'บจก. เอเชียกลาส',
     amount: 624000,
     stage: 'sent_to_vendor',
+    createdDate: '2026-08-01',
+    sentDate: '2026-08-12',
     lines: [
       {
         mnsPartNo: '050010-0008',
@@ -191,6 +199,8 @@ export const pendingDeliveries: PendingDelivery[] = [
     itemDetails: 'ไม้พื้นลามิเนต 12 มม. × 80 แผ่น',
     expectedDate: '2026-08-18',
     progress: 'in_transit',
+    vendorName: 'บจก. กรีนวู้ด ซัพพลาย',
+    amount: 97800,
   },
   {
     id: 'DEL-002',
@@ -198,6 +208,8 @@ export const pendingDeliveries: PendingDelivery[] = [
     itemDetails: 'กระจกเทมเปอร์ 10 มม. × 24 แผ่น',
     expectedDate: '2026-08-19',
     progress: 'partial',
+    vendorName: 'บจก. เอเชียกลาส',
+    amount: 624000,
   },
   {
     id: 'DEL-003',
@@ -205,6 +217,8 @@ export const pendingDeliveries: PendingDelivery[] = [
     itemDetails: 'โคมไฟดาวน์ไลท์ LED 15W × 120 ชุด',
     expectedDate: '2026-08-21',
     progress: 'ready',
+    vendorName: 'บจก. ไทยไลท์ติ้ง',
+    amount: 3800,
   },
   {
     id: 'DEL-004',
@@ -212,6 +226,8 @@ export const pendingDeliveries: PendingDelivery[] = [
     itemDetails: 'เหล็กเส้น SD40 12 มม. × 2.4 ตัน',
     expectedDate: '2026-08-22',
     progress: 'in_transit',
+    vendorName: 'บจก. สยามสตีล',
+    amount: 245000,
   },
 ]
 

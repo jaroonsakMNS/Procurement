@@ -5,14 +5,12 @@ import type { PendingPayment } from '../types/procurement'
 
 interface PaymentsViewProps {
   payments: PendingPayment[]
-  paidPoNumbers: string[]
+  paidPayments: PendingPayment[]
   onMarkPaid: (poNumber: string) => void
 }
 
-export default function PaymentsView({ payments, paidPoNumbers, onMarkPaid }: PaymentsViewProps) {
-  const unpaidPayments = payments.filter((p) => !paidPoNumbers.includes(p.poNumber))
-  const paidPayments = payments.filter((p) => paidPoNumbers.includes(p.poNumber))
-
+export default function PaymentsView({ payments, paidPayments, onMarkPaid }: PaymentsViewProps) {
+  const unpaidPayments = payments
   const totalOutstanding = unpaidPayments.reduce((sum, p) => sum + p.amount, 0)
   const totalPaid = paidPayments.reduce((sum, p) => sum + p.amount, 0)
   const overdueCount = unpaidPayments.filter((p) => isOverdue(p.dueDate)).length
@@ -60,7 +58,7 @@ export default function PaymentsView({ payments, paidPoNumbers, onMarkPaid }: Pa
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-slate-400">ชำระแล้ว (Session)</p>
               <p className="mt-1 text-xl font-bold text-slate-900">{formatCurrency(totalPaid)}</p>
-              <p className="text-xs text-slate-500">{paidPayments.length} รายการในเซสชันนี้</p>
+              <p className="text-xs text-slate-500">{paidPayments.length} รายการที่ชำระแล้ว</p>
             </div>
           </div>
         </div>
@@ -143,7 +141,7 @@ export default function PaymentsView({ payments, paidPoNumbers, onMarkPaid }: Pa
         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
           <header className="border-b border-slate-100 px-5 py-4">
             <h2 className="text-sm font-semibold text-slate-900">ชำระแล้วในเซสชันนี้</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Paid this session — ข้อมูลจะรีเซ็ตเมื่อรีโหลดหน้า</p>
+            <p className="mt-0.5 text-xs text-slate-500">Paid records created from the active mock workflow</p>
           </header>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">

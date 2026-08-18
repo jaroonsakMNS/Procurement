@@ -8,6 +8,8 @@ export type EquipmentOrderStatus = 'ordered' | 'pending_order' | 'received' | 'i
 
 export type PendingPurchaseStatus = 'pending' | 'on_po'
 
+export type PaymentStatus = 'pending' | 'paid'
+
 export type StatusKey =
   | JobStatus
   | PoStage
@@ -56,6 +58,9 @@ export interface PurchaseOrder {
   stage: PoStage
   lines: PurchaseOrderLine[]
   note?: string
+  createdDate?: string
+  sentDate?: string
+  deliveredDate?: string
   comparison?: VendorPriceComparison
 }
 
@@ -82,6 +87,9 @@ export interface PendingPayment {
   vendorName: string
   amount: number
   dueDate: string
+  source?: 'seed' | 'delivery'
+  status?: PaymentStatus
+  paidDate?: string
 }
 
 export interface PendingDelivery {
@@ -90,6 +98,9 @@ export interface PendingDelivery {
   itemDetails: string
   expectedDate: string
   progress: DeliveryProgress
+  vendorName?: string
+  amount?: number
+  receivedDate?: string
 }
 
 export interface JobEquipmentItem {
