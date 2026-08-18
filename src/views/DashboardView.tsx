@@ -90,6 +90,7 @@ export default function DashboardView({
   jobs,
   purchaseOrders,
   inventory,
+  pendingItems,
   pendingPayments,
   paidPayments,
   pendingDeliveries,
@@ -181,8 +182,22 @@ export default function DashboardView({
         })
       })
 
+    const openPurchases = pendingItems.filter((item) => item.status === 'pending')
+    if (openPurchases.length > 0) {
+      items.push({
+        id: 'pending-purchase-count',
+        title: `Pending purchase: ${openPurchases.length} รายการ`,
+        detail: openPurchases
+          .slice(0, 2)
+          .map((item) => item.partNo)
+          .join(', '),
+        level: 'info',
+        type: 'approval',
+      })
+    }
+
     return items.slice(0, 6)
-  }, [inventory, overduePayments, purchaseOrders, pendingDeliveries])
+  }, [inventory, overduePayments, purchaseOrders, pendingDeliveries, pendingItems])
 
   return (
     <div className="space-y-6">
@@ -233,9 +248,9 @@ export default function DashboardView({
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden md:col-span-2 xl:col-span-1">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm md:col-span-2 xl:col-span-1">
           <SectionHeader title="การแจ้งเตือนสด" hint="Real-time Alert Feed" viewId="dashboard" onNavigate={onNavigate} />
-          <div className="px-5 py-5">
+          <div className="max-h-80 overflow-y-auto px-5 py-5">
             <AlertFeed items={alertFeed} />
           </div>
         </div>
@@ -249,6 +264,7 @@ export default function DashboardView({
           </div>
         </div>
 
+        <div className="flex flex-col gap-5">
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <SectionHeader title="งานล่าสุด" hint="Recent Jobs" viewId="jobs" onNavigate={onNavigate} />
           <div className="overflow-x-auto">
@@ -273,7 +289,6 @@ export default function DashboardView({
           </div>
         </div>
 
-        <div className="flex flex-col gap-5">
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <SectionHeader title="ยอดค้างชำระ" hint="Outstanding Payments" viewId="payments" onNavigate={onNavigate} />
             <div className="grid grid-cols-2 divide-x divide-slate-100 px-0 py-4">

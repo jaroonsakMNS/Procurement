@@ -246,16 +246,19 @@ export default function VendorComparisonForm({
                                 min={0}
                                 value={cell?.unitPrice ?? 0}
                                 onChange={(event) =>
-                                  setQuotes((current) => ({
-                                    ...current,
-                                    [part.id]: {
-                                      ...current[part.id],
-                                      [slot]: {
-                                        ...current[part.id][slot],
-                                        unitPrice: Number(event.target.value) || 0,
+                                  setQuotes((current) => {
+                                    const existing = current[part.id]?.[slot] ?? { unitPrice: 0, leadDays: 0 }
+                                    return {
+                                      ...current,
+                                      [part.id]: {
+                                        ...current[part.id],
+                                        [slot]: {
+                                          ...existing,
+                                          unitPrice: Number(event.target.value) || 0,
+                                        },
                                       },
-                                    },
-                                  }))
+                                    }
+                                  })
                                 }
                                 className={inputClass}
                               />
@@ -267,16 +270,19 @@ export default function VendorComparisonForm({
                                 min={0}
                                 value={cell?.leadDays ?? 0}
                                 onChange={(event) =>
-                                  setQuotes((current) => ({
-                                    ...current,
-                                    [part.id]: {
-                                      ...current[part.id],
-                                      [slot]: {
-                                        ...current[part.id][slot],
-                                        leadDays: Number(event.target.value) || 0,
+                                  setQuotes((current) => {
+                                    const existing = current[part.id]?.[slot] ?? { unitPrice: 0, leadDays: 0 }
+                                    return {
+                                      ...current,
+                                      [part.id]: {
+                                        ...current[part.id],
+                                        [slot]: {
+                                          ...existing,
+                                          leadDays: Number(event.target.value) || 0,
+                                        },
                                       },
-                                    },
-                                  }))
+                                    }
+                                  })
                                 }
                                 className={inputClass}
                               />

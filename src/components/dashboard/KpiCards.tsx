@@ -65,7 +65,7 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
   ]
 
   return (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
+    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
       {cards.map((card) => {
         const Icon = card.icon
 
@@ -81,10 +81,10 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
               {/* Icon + labels row */}
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-medium uppercase tracking-wider text-slate-400">
+                  <p className="text-[11px] font-medium uppercase leading-tight tracking-wide text-slate-400">
                     {card.hint}
                   </p>
-                  <p className="mt-1 truncate text-sm font-semibold text-slate-800">{card.label}</p>
+                  <p className="mt-1 text-sm font-semibold leading-snug text-slate-800">{card.label}</p>
                 </div>
                 <div className={`shrink-0 rounded-xl p-2.5 ${card.accent}`}>
                   <Icon className="h-5 w-5" />

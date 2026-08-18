@@ -11,7 +11,7 @@ import {
 } from './data/mockData'
 import { inventoryItems as initialInventory, pendingPurchases as initialPending } from './data/inventory'
 import { vendors as initialVendors } from './data/vendors'
-import { generatePoNumber } from './lib/format'
+import { generatePoNumber, nextVendorId, shortageQty } from './lib/format'
 import type {
   CartLine,
   InventoryItem,
@@ -171,14 +171,14 @@ export default function App() {
     setPendingItems((current) => {
       let id = nextPendingId(current)
       const extras = parts
-        .filter((part) => part.status === 'pending_order')
+        .filter((part) => part.status === 'pending_order' && shortageQty(part.qty, part.storeQty) > 0)
         .map((part) => ({
           id: id++,
           jobId: job.jobId,
           mnsPartNo: part.mnsPartNo,
           partNo: part.partNo,
           description: part.description,
-          qty: Math.max(part.qty - part.storeQty, part.qty),
+          qty: shortageQty(part.qty, part.storeQty),
           unitPrice: part.unitPrice,
           status: 'pending' as const,
         }))
@@ -215,6 +215,7 @@ export default function App() {
       const extras = selectedParts
         .filter(
           (part) =>
+            shortageQty(part.qty, part.storeQty) > 0 &&
             !current.some(
               (item) =>
                 item.status === 'pending' && item.partNo === part.partNo && item.jobId === part.jobId,
@@ -226,7 +227,7 @@ export default function App() {
           mnsPartNo: part.mnsPartNo,
           partNo: part.partNo,
           description: part.description,
-          qty: Math.max(part.qty - part.storeQty, 1),
+          qty: shortageQty(part.qty, part.storeQty),
           unitPrice: part.unitPrice,
           status: 'pending' as const,
         }))
@@ -431,22 +432,21 @@ export default function App() {
       if (vendor.id) {
         return current.map((item) => (item.id === vendor.id ? { ...item, ...vendor, id: vendor.id } : item))
       }
-      return [...current, { ...vendor, id: `VEN-${String(current.length + 1).padStart(3, '0')}` }]
+      return [...current, { ...vendor, id: nextVendorId(current) }]
     })
   }
 
   function handleMarkPaid(poNumber: string) {
-    setPendingPayments((current) => {
-      const payment = current.find((item) => item.poNumber === poNumber)
-      if (!payment) {
-        return current
-      }
-      setPaidPayments((paid) => [
-        { ...payment, status: 'paid', paidDate: todayIso() },
-        ...paid.filter((item) => item.poNumber !== poNumber),
-      ])
-      return current.filter((item) => item.poNumber !== poNumber)
-    })
+    const payment = pendingPayments.find((item) => item.poNumber === poNumber)
+    if (!payment) {
+      return
+    }
+
+    setPendingPayments((current) => current.filter((item) => item.poNumber !== poNumber))
+    setPaidPayments((paid) => [
+      { ...payment, status: 'paid', paidDate: todayIso() },
+      ...paid.filter((item) => item.poNumber !== poNumber),
+    ])
   }
 
   function renderView() {
