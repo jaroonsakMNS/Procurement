@@ -1,16 +1,6 @@
 import { useMemo, useState } from 'react'
 import DashboardLayout from './components/layout/DashboardLayout'
-import KpiCards from './components/dashboard/KpiCards'
-import VendorAssignedJobs from './components/dashboard/VendorAssignedJobs'
-import PurchaseOrderBoard from './components/dashboard/PurchaseOrderBoard'
-import PendingPayments from './components/dashboard/PendingPayments'
-import PendingDeliveries from './components/dashboard/PendingDeliveries'
-import JobOrderedEquipment from './components/dashboard/JobOrderedEquipment'
-import JobDetails from './components/jobs/JobDetails'
-import InventoryDashboard from './components/inventory/InventoryDashboard'
-import StoreCatalog from './components/store/StoreCatalog'
-import PendingPurchaseBoard from './components/procurement/PendingPurchaseBoard'
-import VendorDirectory from './components/vendors/VendorDirectory'
+import type { DraftPart } from './lib/parseJobExcel'
 import {
   computeKpis,
   jobEquipment as initialEquipment,
@@ -21,8 +11,7 @@ import {
 } from './data/mockData'
 import { inventoryItems as initialInventory, pendingPurchases as initialPending } from './data/inventory'
 import { vendors as initialVendors } from './data/vendors'
-import { generateJobId, generatePoNumber, matchesQuery } from './lib/format'
-import type { DraftPart } from './lib/parseJobExcel'
+import { generatePoNumber } from './lib/format'
 import type {
   CartLine,
   InventoryItem,
@@ -33,6 +22,14 @@ import type {
   Vendor,
   VendorJob,
 } from './types/procurement'
+import DashboardView from './views/DashboardView'
+import JobsView from './views/JobsView'
+import PurchaseOrderView from './views/PurchaseOrderView'
+import InventoryView from './views/InventoryView'
+import DeliveriesView from './views/DeliveriesView'
+import PaymentsView from './views/PaymentsView'
+
+type ViewId = 'dashboard' | 'jobs' | 'po' | 'inventory' | 'deliveries' | 'payments'
 
 function applyGoodsReceipt(inventory: InventoryItem[], lines: PurchaseOrderLine[]): InventoryItem[] {
   const next = inventory.map((item) => ({ ...item }))
@@ -63,7 +60,10 @@ function applyGoodsReceipt(inventory: InventoryItem[], lines: PurchaseOrderLine[
 }
 
 export default function App() {
+  const [activeView, setActiveView] = useState<ViewId>('dashboard')
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Core state
   const [jobs, setJobs] = useState<VendorJob[]>(initialJobs)
   const [equipment, setEquipment] = useState<JobEquipmentItem[]>(initialEquipment)
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(initialPurchaseOrders)
@@ -72,71 +72,35 @@ export default function App() {
   const [vendors, setVendors] = useState<Vendor[]>(initialVendors)
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [poNotice, setPoNotice] = useState<string | null>(null)
+  const [paidPoNumbers, setPaidPoNumbers] = useState<string[]>([])
 
-  const selectedJob = jobs.find((job) => job.jobId === selectedJobId) ?? null
-  const selectedJobParts = equipment.filter((item) => item.jobId === selectedJobId)
+  // Computed
+  const activePendingPayments = useMemo(
+    () => pendingPayments.filter((p) => !paidPoNumbers.includes(p.poNumber)),
+    [paidPoNumbers],
+  )
 
   const kpis = useMemo(
     () =>
       computeKpis(
         jobs,
         purchaseOrders,
-        pendingPayments,
+        activePendingPayments,
         pendingDeliveries,
         equipment,
         inventory,
         pendingItems,
       ),
-    [jobs, purchaseOrders, equipment, inventory, pendingItems],
+    [jobs, purchaseOrders, activePendingPayments, equipment, inventory, pendingItems],
   )
 
-  const filteredJobs = useMemo(
-    () =>
-      jobs.filter((job) =>
-        matchesQuery(searchQuery, [job.jobId, job.projectName, job.vendorName, job.status]),
-      ),
-    [jobs, searchQuery],
-  )
-
-  const filteredPurchaseOrders = useMemo(
-    () =>
-      purchaseOrders.filter((po) =>
-        matchesQuery(searchQuery, [po.poNumber, po.vendorName, po.note ?? '', po.stage]),
-      ),
-    [purchaseOrders, searchQuery],
-  )
-
-  const filteredPayments = useMemo(
-    () =>
-      pendingPayments.filter((item) =>
-        matchesQuery(searchQuery, [item.poNumber, item.vendorName, item.amount, item.dueDate]),
-      ),
-    [searchQuery],
-  )
-
-  const filteredDeliveries = useMemo(
-    () =>
-      pendingDeliveries.filter((item) =>
-        matchesQuery(searchQuery, [item.poNumber, item.itemDetails, item.expectedDate, item.progress]),
-      ),
-    [searchQuery],
-  )
-
-  const filteredEquipment = useMemo(
-    () =>
-      equipment.filter(
-        (item) =>
-          (item.status === 'ordered' || item.status === 'issued') &&
-          matchesQuery(searchQuery, [item.jobId, item.mnsPartNo, item.partNo, item.description, item.status]),
-      ),
-    [equipment, searchQuery],
-  )
+  // ── Handlers ──────────────────────────────────────────────
 
   function nextPendingId(list: PendingPurchaseItem[]) {
     return list.reduce((max, item) => Math.max(max, item.id), 0) + 1
   }
 
-  function handleCreateJob(job: VendorJob, parts: DraftPart[]) {
+  function handleCreateJob(job: VendorJob, parts: DraftPart[]): boolean {
     if (jobs.some((item) => item.jobId.toLowerCase() === job.jobId.toLowerCase())) {
       return false
     }
@@ -175,7 +139,6 @@ export default function App() {
       if (part.id) {
         return current.map((item) => (item.id === part.id ? { ...item, ...part, id: part.id } : item))
       }
-
       const nextId = current.reduce((max, item) => Math.max(max, item.id), 0) + 1
       return [...current, { ...part, id: nextId }]
     })
@@ -186,9 +149,8 @@ export default function App() {
   }
 
   function handleRequestPurchase(partIds: number[]) {
-    if (!selectedJob || partIds.length === 0) {
-      return
-    }
+    const selectedJob = jobs.find((j) => j.jobId === selectedJobId)
+    if (!selectedJob || partIds.length === 0) return
 
     const selectedParts = equipment.filter((item) => partIds.includes(item.id))
     setPendingItems((current) => {
@@ -220,7 +182,7 @@ export default function App() {
     pendingIds: number[],
     vendorId: string,
     quotedPrices: Record<number, number>,
-  ) {
+  ): string {
     const vendor = vendors.find((item) => item.id === vendorId)
     const selected = pendingItems.filter((item) => pendingIds.includes(item.id) && item.status === 'pending')
 
@@ -285,9 +247,7 @@ export default function App() {
 
   function handleMarkDelivered(poNumber: string) {
     const po = purchaseOrders.find((item) => item.poNumber === poNumber)
-    if (!po || po.stage === 'delivered') {
-      return
-    }
+    if (!po || po.stage === 'delivered') return
 
     setInventory((current) => applyGoodsReceipt(current, po.lines))
     setPurchaseOrders((current) =>
@@ -296,7 +256,7 @@ export default function App() {
     setPendingItems((current) => current.filter((item) => item.poNumber !== poNumber))
   }
 
-  function handleRequisition(jobId: string, lines: CartLine[]) {
+  function handleRequisition(jobId: string, lines: CartLine[]): string {
     let issuedCount = 0
     let shortageCount = 0
     const nextInventory = inventory.map((item) => ({ ...item }))
@@ -307,9 +267,7 @@ export default function App() {
 
     for (const line of lines) {
       const stock = nextInventory.find((item) => item.sku === line.sku)
-      if (!stock) {
-        continue
-      }
+      if (!stock) continue
 
       const issuedQty = Math.min(stock.currentStock, line.qty)
       const shortage = line.qty - issuedQty
@@ -356,61 +314,119 @@ export default function App() {
   function handleSaveVendor(vendor: Omit<Vendor, 'id'> & { id?: string }) {
     setVendors((current) => {
       if (vendor.id) {
-        return current.map((item) => (item.id === vendor.id ? { ...item, ...vendor, id: vendor.id } : item))
+        return current.map((item) =>
+          item.id === vendor.id ? { ...item, ...vendor, id: vendor.id } : item,
+        )
       }
-
       const nextId = `VEN-${String(current.length + 1).padStart(3, '0')}`
       return [...current, { ...vendor, id: nextId }]
     })
   }
 
-  return (
-    <DashboardLayout searchQuery={searchQuery} onSearchChange={setSearchQuery}>
-      <div className="mx-auto max-w-[90rem] space-y-6">
-        <KpiCards kpis={kpis} />
+  function handleMarkPaid(poNumber: string) {
+    setPaidPoNumbers((current) =>
+      current.includes(poNumber) ? current : [...current, poNumber],
+    )
+  }
 
-        <InventoryDashboard items={inventory} />
-        <StoreCatalog items={inventory} jobs={jobs} onSubmit={handleRequisition} />
-        <PendingPurchaseBoard items={pendingItems} vendors={vendors} onGeneratePo={handleGeneratePo} />
-        <VendorDirectory
-          vendors={vendors}
-          onSave={handleSaveVendor}
-          onDelete={(vendorId) => setVendors((current) => current.filter((item) => item.id !== vendorId))}
-        />
+  // ── Render view ───────────────────────────────────────────
 
-        <JobOrderedEquipment items={filteredEquipment} />
+  function renderView() {
+    switch (activeView) {
+      case 'dashboard':
+        return (
+          <DashboardView
+            kpis={kpis}
+            jobs={jobs}
+            purchaseOrders={purchaseOrders}
+            inventory={inventory}
+            pendingItems={pendingItems}
+            pendingPayments={pendingPayments}
+            pendingDeliveries={pendingDeliveries}
+            paidPoNumbers={paidPoNumbers}
+            onNavigate={(id) => setActiveView(id as ViewId)}
+          />
+        )
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <VendorAssignedJobs
-            jobs={filteredJobs}
-            suggestedJobId={generateJobId(jobs)}
-            existingJobIds={jobs.map((job) => job.jobId)}
+      case 'jobs':
+        return (
+          <JobsView
+            jobs={jobs}
+            equipment={equipment}
+            selectedJobId={selectedJobId}
+            poNotice={poNotice}
+            searchQuery={searchQuery}
             onCreateJob={handleCreateJob}
             onOpenJob={(job) => {
               setPoNotice(null)
               setSelectedJobId(job.jobId)
             }}
+            onCloseJob={() => {
+              setSelectedJobId(null)
+              setPoNotice(null)
+            }}
+            onSavePart={handleSavePart}
+            onDeletePart={handleDeletePart}
+            onRequestPurchase={handleRequestPurchase}
           />
-          <PurchaseOrderBoard purchaseOrders={filteredPurchaseOrders} onMarkDelivered={handleMarkDelivered} />
-          <PendingPayments payments={filteredPayments} />
-          <PendingDeliveries deliveries={filteredDeliveries} />
-        </div>
-      </div>
+        )
 
-      {selectedJob ? (
-        <JobDetails
-          job={selectedJob}
-          parts={selectedJobParts}
-          notice={poNotice}
-          onClose={() => {
-            setSelectedJobId(null)
-            setPoNotice(null)
-          }}
-          onSavePart={handleSavePart}
-          onDeletePart={handleDeletePart}
-          onRequestPurchase={handleRequestPurchase}
-        />
-      ) : null}
+      case 'po':
+        return (
+          <PurchaseOrderView
+            pendingItems={pendingItems}
+            purchaseOrders={purchaseOrders}
+            vendors={vendors}
+            searchQuery={searchQuery}
+            onGeneratePo={handleGeneratePo}
+            onMarkDelivered={handleMarkDelivered}
+            onSaveVendor={handleSaveVendor}
+            onDeleteVendor={(vendorId) =>
+              setVendors((current) => current.filter((v) => v.id !== vendorId))
+            }
+          />
+        )
+
+      case 'inventory':
+        return (
+          <InventoryView
+            inventory={inventory}
+            jobs={jobs}
+            onRequisition={handleRequisition}
+          />
+        )
+
+      case 'deliveries':
+        return (
+          <DeliveriesView
+            purchaseOrders={purchaseOrders}
+            pendingDeliveries={pendingDeliveries}
+            onMarkDelivered={handleMarkDelivered}
+          />
+        )
+
+      case 'payments':
+        return (
+          <PaymentsView
+            payments={pendingPayments}
+            paidPoNumbers={paidPoNumbers}
+            onMarkPaid={handleMarkPaid}
+          />
+        )
+
+      default:
+        return null
+    }
+  }
+
+  return (
+    <DashboardLayout
+      activeView={activeView}
+      onNavigate={(id) => setActiveView(id as ViewId)}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+    >
+      <div className="mx-auto max-w-[90rem] space-y-6">{renderView()}</div>
     </DashboardLayout>
   )
 }

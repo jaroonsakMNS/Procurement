@@ -4,42 +4,37 @@ import TopNav from './TopNav'
 
 interface DashboardLayoutProps {
   children: ReactNode
+  activeView: string
+  onNavigate: (id: string) => void
   searchQuery: string
   onSearchChange: (value: string) => void
 }
 
 export default function DashboardLayout({
   children,
+  activeView,
+  onNavigate,
   searchQuery,
   onSearchChange,
 }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [activeId, setActiveId] = useState('dashboard')
-
-  function handleNavigate(id: string) {
-    setActiveId(id)
-    setIsSidebarOpen(false)
-
-    if (id === 'dashboard') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-      return
-    }
-
-    const section = document.getElementById(id)
-    section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
 
   return (
     <div className="min-h-screen lg:flex">
       <Sidebar
-        activeId={activeId}
-        onNavigate={handleNavigate}
+        activeId={activeView}
+        onNavigate={(id) => {
+          onNavigate(id)
+          setIsSidebarOpen(false)
+          window.scrollTo({ top: 0, behavior: 'instant' })
+        }}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <TopNav
+          activeView={activeView}
           onMenuClick={() => setIsSidebarOpen(true)}
           searchQuery={searchQuery}
           onSearchChange={onSearchChange}
