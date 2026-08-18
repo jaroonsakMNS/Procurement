@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import { formatCurrency } from '../../lib/format'
-import type { PendingPurchaseItem, Vendor } from '../../types/procurement'
+import type { PendingPurchaseItem, Vendor, VendorPriceComparison } from '../../types/procurement'
 
 const SLOTS = ['A', 'B', 'C'] as const
 type Slot = (typeof SLOTS)[number]
@@ -16,7 +16,11 @@ interface VendorComparisonFormProps {
   parts: PendingPurchaseItem[]
   vendors: Vendor[]
   onClose: () => void
-  onGeneratePo: (vendorId: string, quotedPrices: Record<number, number>) => string
+  onGeneratePo: (
+    vendorId: string,
+    quotedPrices: Record<number, number>,
+    comparison: VendorPriceComparison,
+  ) => string
 }
 
 const inputClass =
@@ -122,7 +126,20 @@ export default function VendorComparisonForm({
     const quotedPrices = Object.fromEntries(
       parts.map((part) => [part.id, quotes[part.id][winner].unitPrice]),
     )
-    const message = onGeneratePo(vendorId, quotedPrices)
+    const comparison: VendorPriceComparison = {
+      winnerVendorId: vendorId,
+      quotes: SLOTS.map((slot) => ({
+        vendorId: vendorSlots[slot],
+        vendorName: slotVendors.find((item) => item.slot === slot)?.vendor?.name ?? `Vendor ${slot}`,
+        total: totals[slot],
+        lines: parts.map((part) => ({
+          pendingId: part.id,
+          unitPrice: quotes[part.id][slot].unitPrice,
+          leadDays: quotes[part.id][slot].leadDays,
+        })),
+      })),
+    }
+    const message = onGeneratePo(vendorId, quotedPrices, comparison)
     setResult(message)
     setError('')
   }
@@ -229,16 +246,19 @@ export default function VendorComparisonForm({
                                 min={0}
                                 value={cell?.unitPrice ?? 0}
                                 onChange={(event) =>
-                                  setQuotes((current) => ({
-                                    ...current,
-                                    [part.id]: {
-                                      ...current[part.id],
-                                      [slot]: {
-                                        ...current[part.id][slot],
-                                        unitPrice: Number(event.target.value) || 0,
+                                  setQuotes((current) => {
+                                    const existing = current[part.id]?.[slot] ?? { unitPrice: 0, leadDays: 0 }
+                                    return {
+                                      ...current,
+                                      [part.id]: {
+                                        ...current[part.id],
+                                        [slot]: {
+                                          ...existing,
+                                          unitPrice: Number(event.target.value) || 0,
+                                        },
                                       },
-                                    },
-                                  }))
+                                    }
+                                  })
                                 }
                                 className={inputClass}
                               />
@@ -250,16 +270,19 @@ export default function VendorComparisonForm({
                                 min={0}
                                 value={cell?.leadDays ?? 0}
                                 onChange={(event) =>
-                                  setQuotes((current) => ({
-                                    ...current,
-                                    [part.id]: {
-                                      ...current[part.id],
-                                      [slot]: {
-                                        ...current[part.id][slot],
-                                        leadDays: Number(event.target.value) || 0,
+                                  setQuotes((current) => {
+                                    const existing = current[part.id]?.[slot] ?? { unitPrice: 0, leadDays: 0 }
+                                    return {
+                                      ...current,
+                                      [part.id]: {
+                                        ...current[part.id],
+                                        [slot]: {
+                                          ...existing,
+                                          leadDays: Number(event.target.value) || 0,
+                                        },
                                       },
-                                    },
-                                  }))
+                                    }
+                                  })
                                 }
                                 className={inputClass}
                               />

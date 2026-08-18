@@ -54,6 +54,7 @@ export const purchaseOrders: PurchaseOrder[] = [
     vendorName: 'บจก. สยามสตีล',
     amount: 900,
     stage: 'draft',
+    createdDate: '2026-03-12',
     note: 'รายการอิเล็กทรอนิกส์หลายจ๊อบ',
     lines: [
       {
@@ -70,8 +71,9 @@ export const purchaseOrders: PurchaseOrder[] = [
     poNumber: 'PO-2608-0001',
     vendorId: 'VEN-006',
     vendorName: 'บจก. เมทัลเวิร์ค ไทย',
-    amount: 210000,
+    amount: 14800,
     stage: 'draft',
+    createdDate: '2026-04-08',
     lines: [
       {
         mnsPartNo: '041010-0101',
@@ -86,8 +88,9 @@ export const purchaseOrders: PurchaseOrder[] = [
     poNumber: 'PO-2608-0009',
     vendorId: 'VEN-002',
     vendorName: 'หจก. นครปูนซีเมนต์',
-    amount: 312400,
+    amount: 16800,
     stage: 'pending_approval',
+    createdDate: '2026-05-16',
     lines: [
       {
         mnsPartNo: '041010-0108',
@@ -105,6 +108,7 @@ export const purchaseOrders: PurchaseOrder[] = [
     vendorName: 'บจก. ไทยไลท์ติ้ง',
     amount: 3800,
     stage: 'pending_approval',
+    createdDate: '2026-06-04',
     lines: [
       {
         mnsPartNo: '022010-0044',
@@ -120,8 +124,10 @@ export const purchaseOrders: PurchaseOrder[] = [
     poNumber: 'PO-2608-0004',
     vendorId: 'VEN-004',
     vendorName: 'บจก. กรีนวู้ด ซัพพลาย',
-    amount: 97800,
+    amount: 1900,
     stage: 'sent_to_vendor',
+    createdDate: '2026-07-10',
+    sentDate: '2026-08-10',
     lines: [
       {
         mnsPartNo: '022010-0044',
@@ -137,8 +143,10 @@ export const purchaseOrders: PurchaseOrder[] = [
     poNumber: 'PO-2608-0003',
     vendorId: 'VEN-005',
     vendorName: 'บจก. เอเชียกลาส',
-    amount: 624000,
+    amount: 3600,
     stage: 'sent_to_vendor',
+    createdDate: '2026-08-01',
+    sentDate: '2026-08-12',
     lines: [
       {
         mnsPartNo: '050010-0008',
@@ -188,30 +196,20 @@ export const pendingDeliveries: PendingDelivery[] = [
   {
     id: 'DEL-001',
     poNumber: 'PO-2608-0004',
-    itemDetails: 'ไม้พื้นลามิเนต 12 มม. × 80 แผ่น',
+    itemDetails: 'LED-T8-18W × 20',
     expectedDate: '2026-08-18',
     progress: 'in_transit',
+    vendorName: 'บจก. กรีนวู้ด ซัพพลาย',
+    amount: 1900,
   },
   {
     id: 'DEL-002',
     poNumber: 'PO-2608-0003',
-    itemDetails: 'กระจกเทมเปอร์ 10 มม. × 24 แผ่น',
+    itemDetails: 'WAGO-221-412 × 200',
     expectedDate: '2026-08-19',
     progress: 'partial',
-  },
-  {
-    id: 'DEL-003',
-    poNumber: 'PO-2608-0007',
-    itemDetails: 'โคมไฟดาวน์ไลท์ LED 15W × 120 ชุด',
-    expectedDate: '2026-08-21',
-    progress: 'ready',
-  },
-  {
-    id: 'DEL-004',
-    poNumber: 'PO-2607-0041',
-    itemDetails: 'เหล็กเส้น SD40 12 มม. × 2.4 ตัน',
-    expectedDate: '2026-08-22',
-    progress: 'in_transit',
+    vendorName: 'บจก. เอเชียกลาส',
+    amount: 3600,
   },
 ]
 

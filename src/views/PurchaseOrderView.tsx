@@ -1,0 +1,112 @@
+import { useMemo, useState } from 'react'
+import PurchaseOrderBoard from '../components/dashboard/PurchaseOrderBoard'
+import PendingPurchaseBoard from '../components/procurement/PendingPurchaseBoard'
+import PurchaseOrderPreviewModal from '../components/procurement/PurchaseOrderPreviewModal'
+import VendorDirectory from '../components/vendors/VendorDirectory'
+import { matchesQuery } from '../lib/format'
+import type {
+  PendingPurchaseItem,
+  PoStage,
+  PurchaseOrder,
+  Vendor,
+  VendorPriceComparison,
+} from '../types/procurement'
+
+interface PurchaseOrderViewProps {
+  pendingItems: PendingPurchaseItem[]
+  purchaseOrders: PurchaseOrder[]
+  vendors: Vendor[]
+  searchQuery: string
+  onGeneratePo: (
+    pendingIds: number[],
+    vendorId: string,
+    quotedPrices: Record<number, number>,
+    comparison: VendorPriceComparison,
+  ) => string
+  onUpdatePoStage: (poNumber: string, nextStage: PoStage) => void
+  onSaveVendor: (vendor: Omit<Vendor, 'id'> & { id?: string }) => void
+  onDeleteVendor: (vendorId: string) => void
+}
+
+type TabId = 'pending' | 'orders' | 'vendors'
+
+const TABS: Array<{ id: TabId; label: string; hint: string }> = [
+  { id: 'pending', label: 'รายการรอจัดซื้อ', hint: 'Parts Pending Purchase' },
+  { id: 'orders', label: 'ใบสั่งซื้อ (PO)', hint: 'Purchase Orders' },
+  { id: 'vendors', label: 'ฐานข้อมูลร้านค้า', hint: 'Vendor Directory' },
+]
+
+export default function PurchaseOrderView({
+  pendingItems,
+  purchaseOrders,
+  vendors,
+  searchQuery,
+  onGeneratePo,
+  onUpdatePoStage,
+  onSaveVendor,
+  onDeleteVendor,
+}: PurchaseOrderViewProps) {
+  const [activeTab, setActiveTab] = useState<TabId>('pending')
+  const [previewPo, setPreviewPo] = useState<PurchaseOrder | null>(null)
+
+  const filteredOrders = useMemo(
+    () =>
+      purchaseOrders.filter((po) =>
+        matchesQuery(searchQuery, [po.poNumber, po.vendorName, po.note ?? '', po.stage]),
+      ),
+    [purchaseOrders, searchQuery],
+  )
+
+  return (
+    <div className="space-y-5">
+      {/* Tab navigation */}
+      <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
+              activeTab === tab.id
+                ? 'bg-teal-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <span className="block">{tab.label}</span>
+            <span
+              className={`block text-[11px] font-normal ${
+                activeTab === tab.id ? 'text-teal-100' : 'text-slate-400'
+              }`}
+            >
+              {tab.hint}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'pending' && (
+        <PendingPurchaseBoard
+          items={pendingItems}
+          vendors={vendors}
+          onGeneratePo={onGeneratePo}
+        />
+      )}
+      {activeTab === 'orders' && (
+        <PurchaseOrderBoard
+          purchaseOrders={filteredOrders}
+          onUpdateStage={onUpdatePoStage}
+          onPreview={setPreviewPo}
+        />
+      )}
+      {activeTab === 'vendors' && (
+        <VendorDirectory
+          vendors={vendors}
+          onSave={onSaveVendor}
+          onDelete={onDeleteVendor}
+        />
+      )}
+
+      <PurchaseOrderPreviewModal purchaseOrder={previewPo} onClose={() => setPreviewPo(null)} />
+    </div>
+  )
+}

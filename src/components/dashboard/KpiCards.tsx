@@ -14,7 +14,8 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
       value: kpis.vendorJobsReady,
       suffix: 'รายการ',
       icon: Briefcase,
-      accent: 'bg-teal-50 text-teal-700',
+      bar: 'bg-teal-500',
+      accent: 'bg-teal-50 text-teal-600',
     },
     {
       label: 'รอจัดซื้อ',
@@ -22,7 +23,8 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
       value: kpis.pendingPurchaseCount,
       suffix: 'รายการ',
       icon: ShoppingCart,
-      accent: 'bg-amber-50 text-amber-700',
+      bar: 'bg-amber-400',
+      accent: 'bg-amber-50 text-amber-600',
     },
     {
       label: 'สต็อกต่ำ',
@@ -30,7 +32,8 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
       value: kpis.lowStockCount,
       suffix: 'SKU',
       icon: AlertTriangle,
-      accent: 'bg-rose-50 text-rose-700',
+      bar: 'bg-rose-500',
+      accent: 'bg-rose-50 text-rose-600',
     },
     {
       label: 'PO กำลังดำเนินการ',
@@ -38,7 +41,8 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
       value: kpis.posInProcess,
       suffix: 'ใบ',
       icon: FileText,
-      accent: 'bg-sky-50 text-sky-700',
+      bar: 'bg-sky-500',
+      accent: 'bg-sky-50 text-sky-600',
     },
     {
       label: 'ยอดค้างชำระ',
@@ -46,7 +50,8 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
       value: formatCurrency(kpis.pendingPaymentTotal),
       suffix: '',
       icon: Wallet,
-      accent: 'bg-orange-50 text-orange-700',
+      bar: 'bg-orange-500',
+      accent: 'bg-orange-50 text-orange-600',
     },
     {
       label: 'รอรับของเข้าคลัง',
@@ -54,35 +59,48 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
       value: kpis.pendingDeliveriesCount,
       suffix: 'รายการ',
       icon: Package,
-      accent: 'bg-violet-50 text-violet-700',
+      bar: 'bg-violet-500',
+      accent: 'bg-violet-50 text-violet-600',
     },
   ]
 
   return (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
+    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
       {cards.map((card) => {
         const Icon = card.icon
 
         return (
           <article
             key={card.label}
-            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+            className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
           >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">{card.label}</p>
-                <p className="mt-0.5 text-xs text-slate-400">{card.hint}</p>
+            {/* Coloured accent bar */}
+            <div className={`h-1 w-full ${card.bar}`} />
+
+            <div className="p-5">
+              {/* Icon + labels row */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium uppercase leading-tight tracking-wide text-slate-400">
+                    {card.hint}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold leading-snug text-slate-800">{card.label}</p>
+                </div>
+                <div className={`shrink-0 rounded-xl p-2.5 ${card.accent}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
               </div>
-              <div className={`rounded-lg p-2 ${card.accent}`}>
-                <Icon className="h-4 w-4" />
+
+              {/* Value */}
+              <div className="mt-4 flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold tracking-tight text-slate-900">
+                  {card.value}
+                </span>
+                {card.suffix ? (
+                  <span className="text-sm font-medium text-slate-400">{card.suffix}</span>
+                ) : null}
               </div>
             </div>
-            <p className="mt-4 text-2xl font-semibold tracking-tight text-slate-900">
-              {card.value}
-              {card.suffix ? (
-                <span className="ml-1 text-sm font-medium text-slate-400">{card.suffix}</span>
-              ) : null}
-            </p>
           </article>
         )
       })}

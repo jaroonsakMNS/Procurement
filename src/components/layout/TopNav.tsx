@@ -1,12 +1,47 @@
 import { Bell, Menu, Search } from 'lucide-react'
 
+const VIEW_META: Record<string, { title: string; subtitle: string }> = {
+  dashboard: {
+    title: 'แดชบอร์ดภาพรวม',
+    subtitle: 'ภาพรวมระบบผลิตงานและจัดซื้อ',
+  },
+  jobs: {
+    title: 'สร้างจ๊อบ & แนบอะไหล่',
+    subtitle: 'สร้างใบงานและจัดการรายการอะไหล่ที่ต้องใช้',
+  },
+  po: {
+    title: 'กระบวนการจัดซื้อ',
+    subtitle: 'รายการรอจัดซื้อ, ใบสั่งซื้อ, เปรียบเทียบราคา และจัดการร้านค้า',
+  },
+  inventory: {
+    title: 'ระบบคลังสินค้า',
+    subtitle: 'ยอดคงเหลือ, เบิก-จ่ายอะไหล่ และร้านค้าภายใน',
+  },
+  deliveries: {
+    title: 'รอรับของ',
+    subtitle: 'ติดตามสถานะการจัดส่ง และยืนยันรับสินค้าเข้าคลัง',
+  },
+  payments: {
+    title: 'ค้างชำระเงิน',
+    subtitle: 'รายการที่รอชำระ, เรียงตามวันครบกำหนด และบันทึกการชำระ',
+  },
+}
+
 interface TopNavProps {
+  activeView: string
   onMenuClick: () => void
   searchQuery: string
   onSearchChange: (value: string) => void
 }
 
-export default function TopNav({ onMenuClick, searchQuery, onSearchChange }: TopNavProps) {
+export default function TopNav({
+  activeView,
+  onMenuClick,
+  searchQuery,
+  onSearchChange,
+}: TopNavProps) {
+  const meta = VIEW_META[activeView] ?? VIEW_META['dashboard']
+
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
@@ -20,11 +55,9 @@ export default function TopNav({ onMenuClick, searchQuery, onSearchChange }: Top
         </button>
         <div className="min-w-0">
           <h1 className="truncate text-base font-semibold text-slate-900 lg:text-lg">
-            แดชบอร์ดจัดซื้อ (Procurement)
+            {meta.title}
           </h1>
-          <p className="hidden text-xs text-slate-500 sm:block">
-            ภาพรวมงานจัดซื้อที่พร้อมเปิด PO, อนุมัติ, ชำระเงิน และรับของ
-          </p>
+          <p className="hidden truncate text-xs text-slate-500 sm:block">{meta.subtitle}</p>
         </div>
       </div>
 

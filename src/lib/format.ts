@@ -47,6 +47,19 @@ export function daysRelativeLabel(isoDate: string): { text: string; overdue: boo
   return { text: `เหลืออีก ${Math.abs(diffDays)} วัน`, overdue: false }
 }
 
+export function shortageQty(qty: number, storeQty: number): number {
+  return Math.max(qty - storeQty, 0)
+}
+
+export function nextVendorId(existing: Array<{ id: string }>): string {
+  const max = existing.reduce((highest, vendor) => {
+    const match = vendor.id.match(/(\d+)$/)
+    return match ? Math.max(highest, Number(match[1])) : highest
+  }, 0)
+
+  return `VEN-${String(max + 1).padStart(3, '0')}`
+}
+
 export function generatePoNumber(existing: Array<{ poNumber: string }>): string {
   const stamp = new Date()
   const prefix = `PO-${String(stamp.getFullYear()).slice(2)}${String(stamp.getMonth() + 1).padStart(2, '0')}-`

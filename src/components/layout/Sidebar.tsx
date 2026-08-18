@@ -1,30 +1,54 @@
 import {
   ClipboardList,
-  Cpu,
   FileText,
   LayoutDashboard,
   Package,
-  ShoppingBag,
   Store,
-  Truck,
-  Users,
   Wallet,
   Warehouse,
   X,
 } from 'lucide-react'
 
-const NAV_ITEMS = [
-  { id: 'dashboard', label: 'แดชบอร์ด', hint: 'Dashboard', icon: LayoutDashboard },
-  { id: 'inventory', label: 'คลังสินค้า', hint: 'Warehouse', icon: Warehouse },
-  { id: 'store', label: 'ร้านค้าภายใน', hint: 'Internal Store', icon: ShoppingBag },
-  { id: 'pending-purchase', label: 'รอจัดซื้อ', hint: 'Pending Purchase', icon: Truck },
-  { id: 'vendors', label: 'ฐานข้อมูลร้านค้า', hint: 'Vendors', icon: Users },
-  { id: 'jobs', label: 'จ๊อบ', hint: 'Jobs', icon: Store },
-  { id: 'job-equipment', label: 'อุปกรณ์ในจ๊อบ', hint: 'Job Equipment', icon: Cpu },
-  { id: 'purchase-orders', label: 'ใบสั่งซื้อ', hint: 'Purchase Orders', icon: FileText },
-  { id: 'payments', label: 'การชำระเงิน', hint: 'Payments', icon: Wallet },
-  { id: 'deliveries', label: 'รอรับของ', hint: 'Deliveries', icon: Package },
+export const NAV_ITEMS = [
+  {
+    id: 'dashboard',
+    label: 'แดชบอร์ด',
+    hint: 'Overview',
+    icon: LayoutDashboard,
+  },
+  {
+    id: 'jobs',
+    label: 'สร้างจ๊อบ & อะไหล่',
+    hint: 'Jobs & Parts',
+    icon: Store,
+  },
+  {
+    id: 'po',
+    label: 'กระบวนการจัดซื้อ',
+    hint: 'PO Processing',
+    icon: FileText,
+  },
+  {
+    id: 'inventory',
+    label: 'คลังสินค้า',
+    hint: 'Inventory & Store',
+    icon: Warehouse,
+  },
+  {
+    id: 'deliveries',
+    label: 'รอรับของ',
+    hint: 'Pending Deliveries',
+    icon: Package,
+  },
+  {
+    id: 'payments',
+    label: 'ค้างชำระเงิน',
+    hint: 'Pending Payments',
+    icon: Wallet,
+  },
 ] as const
+
+export type ViewId = (typeof NAV_ITEMS)[number]['id']
 
 interface SidebarProps {
   activeId: string
@@ -54,8 +78,8 @@ export default function Sidebar({ activeId, onNavigate, isOpen, onClose }: Sideb
               <ClipboardList className="h-5 w-5 text-white" />
             </div>
             <div>
-              <p className="text-sm font-semibold tracking-wide">ระบบจัดซื้อ</p>
-              <p className="text-xs text-slate-400">Procurement</p>
+              <p className="text-sm font-semibold tracking-wide">ระบบผลิต & จัดซื้อ</p>
+              <p className="text-[11px] text-slate-400">Production & Procurement</p>
             </div>
           </div>
           <button
@@ -68,7 +92,7 @@ export default function Sidebar({ activeId, onNavigate, isOpen, onClose }: Sideb
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-3">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon
             const isActive = item.id === activeId
@@ -87,7 +111,9 @@ export default function Sidebar({ activeId, onNavigate, isOpen, onClose }: Sideb
                 <Icon className="h-4 w-4 shrink-0" />
                 <span>
                   <span className="block font-medium">{item.label}</span>
-                  <span className={`block text-[11px] ${isActive ? 'text-teal-100' : 'text-slate-500'}`}>
+                  <span
+                    className={`block text-[11px] ${isActive ? 'text-teal-100' : 'text-slate-500'}`}
+                  >
                     {item.hint}
                   </span>
                 </span>
@@ -97,7 +123,7 @@ export default function Sidebar({ activeId, onNavigate, isOpen, onClose }: Sideb
         </nav>
 
         <div className="border-t border-slate-800 px-5 py-4 text-xs text-slate-500">
-          ข้อมูลจำลอง (Mock Data)
+          ข้อมูลจำลอง · Mock Data · v2.0
         </div>
       </aside>
     </>
