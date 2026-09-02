@@ -1,18 +1,47 @@
 import { useState } from 'react'
-import { formatDate } from '../../lib/format'
-import type { PendingDelivery } from '../../types/procurement'
+import { formatDate, formatDateTime } from '../../lib/format'
+import type { GoodsCondition, GoodsReceipt, PendingDelivery, WorkGroupId } from '../../types/procurement'
+import ReceiveGoodsModal from './ReceiveGoodsModal'
 import StatusBadge from './StatusBadge'
+
+const CONDITION_LABEL: Record<GoodsCondition, string> = {
+  complete: 'ครบถ้วน',
+  partial: 'รับบางส่วน',
+  damaged: 'มีของเสีย/ชำรุด',
+}
 
 interface PendingDeliveriesProps {
   deliveries: PendingDelivery[]
+  workGroup: WorkGroupId
+  canReceive?: boolean
+  onReceive: (id: string, receipt: GoodsReceipt) => void
 }
 
-export default function PendingDeliveries({ deliveries }: PendingDeliveriesProps) {
-  const [receivedIds, setReceivedIds] = useState<Set<string>>(new Set())
+function PersonBlock({
+  title,
+  name,
+  meta,
+}: {
+  title: string
+  name: string
+  meta: string[]
+}) {
+  return (
+    <div>
+      <p className="text-[11px] font-medium tracking-wide text-slate-400 uppercase">{title}</p>
+      <p className="mt-0.5 font-medium text-slate-800">{name}</p>
+      {meta.filter(Boolean).map((line) => (
+        <p key={line} className="text-[11px] text-slate-500">
+          {line}
+        </p>
+      ))}
+    </div>
+  )
+}
 
-  function handleReceive(id: string) {
-    setReceivedIds((current) => new Set(current).add(id))
-  }
+export default function PendingDeliveries({ deliveries, workGroup, canReceive = true, onReceive }: PendingDeliveriesProps) {
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const activeDelivery = deliveries.find((item) => item.id === activeId) ?? null
 
   return (
     <section
@@ -22,7 +51,7 @@ export default function PendingDeliveries({ deliveries }: PendingDeliveriesProps
       <header className="border-b border-slate-100 px-5 py-4">
         <h2 className="text-sm font-semibold text-slate-900">รอรับของ</h2>
         <p className="mt-0.5 text-xs text-slate-500">
-          Pending Deliveries — สินค้าที่ซื้อแล้วและรอเข้าคลัง
+          Pending Deliveries — บันทึกผู้รับของและผู้กรอกรายละเอียดทุกครั้งที่รับเข้าคลัง
         </p>
       </header>
 
@@ -33,22 +62,25 @@ export default function PendingDeliveries({ deliveries }: PendingDeliveriesProps
               <th className="px-5 py-3 font-medium">เลขที่ PO</th>
               <th className="px-5 py-3 font-medium">รายการสินค้า (Item Details)</th>
               <th className="px-5 py-3 font-medium">วันส่งของคาดการณ์</th>
+              <th className="px-5 py-3 font-medium">ผู้รับของ</th>
+              <th className="px-5 py-3 font-medium">ผู้บันทึกรายละเอียด</th>
               <th className="px-5 py-3 font-medium">การดำเนินการ</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {deliveries.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-5 py-8 text-center text-slate-400">
+                <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
                   ไม่พบรายการที่ตรงกับการค้นหา
                 </td>
               </tr>
             ) : (
               deliveries.map((item) => {
-                const received = receivedIds.has(item.id) || item.progress === 'received'
+                const received = item.progress === 'received'
+                const receipt = item.receipt
 
                 return (
-                  <tr key={item.id} className="hover:bg-slate-50/80">
+                  <tr key={item.id} className="align-top hover:bg-slate-50/80">
                     <td className="px-5 py-3 font-medium whitespace-nowrap text-slate-800">
                       {item.poNumber}
                     </td>
@@ -57,16 +89,57 @@ export default function PendingDeliveries({ deliveries }: PendingDeliveriesProps
                       {formatDate(item.expectedDate)}
                     </td>
                     <td className="px-5 py-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <StatusBadge status={received ? 'received' : item.progress} />
-                        <button
-                          type="button"
-                          disabled={received}
-                          onClick={() => handleReceive(item.id)}
-                          className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-                        >
-                          {received ? 'รับแล้ว' : 'รับของ (Receive)'}
-                        </button>
+                      {receipt ? (
+                        <PersonBlock
+                          title="Receiver"
+                          name={receipt.receiver.name}
+                          meta={[
+                            receipt.receiver.employeeId ? `รหัส ${receipt.receiver.employeeId}` : '',
+                            [receipt.receiver.position, receipt.receiver.department].filter(Boolean).join(' · '),
+                            receipt.receiver.phone,
+                          ]}
+                        />
+                      ) : (
+                        <span className="text-xs text-slate-400">ยังไม่ระบุผู้รับ</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      {receipt ? (
+                        <PersonBlock
+                          title="Recorded by"
+                          name={receipt.recordedBy.name}
+                          meta={[
+                            receipt.recordedBy.workGroupLabel,
+                            `บันทึกเมื่อ ${formatDateTime(receipt.receivedAt)}`,
+                          ]}
+                        />
+                      ) : (
+                        <span className="text-xs text-slate-400">ยังไม่ได้กรอก</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <StatusBadge status={received ? 'received' : item.progress} />
+                          <button
+                            type="button"
+                            disabled={received || !canReceive}
+                            onClick={() => setActiveId(item.id)}
+                            className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                          >
+                            {received ? 'รับแล้ว' : 'รับของ (Receive)'}
+                          </button>
+                        </div>
+                        {receipt ? (
+                          <div className="max-w-xs text-[11px] leading-relaxed text-slate-500">
+                            <p>
+                              สภาพ: {CONDITION_LABEL[receipt.condition]}
+                              {receipt.qtyNote ? ` · ${receipt.qtyNote}` : ''}
+                            </p>
+                            {receipt.location ? <p>สถานที่: {receipt.location}</p> : null}
+                            {receipt.note ? <p>{receipt.note}</p> : null}
+                          </div>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -76,6 +149,18 @@ export default function PendingDeliveries({ deliveries }: PendingDeliveriesProps
           </tbody>
         </table>
       </div>
+
+      {activeDelivery ? (
+        <ReceiveGoodsModal
+          delivery={activeDelivery}
+          workGroup={workGroup}
+          onClose={() => setActiveId(null)}
+          onSubmit={(receipt) => {
+            onReceive(activeDelivery.id, receipt)
+            setActiveId(null)
+          }}
+        />
+      ) : null}
     </section>
   )
 }

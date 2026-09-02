@@ -9,6 +9,7 @@ interface PendingPurchaseBoardProps {
   items: PendingPurchaseItem[]
   jobs?: VendorJob[]
   vendors: Vendor[]
+  canOperate?: boolean
   onGeneratePo: (pendingIds: number[], vendorId: string, quotedPrices: Record<number, number>) => string
 }
 
@@ -16,6 +17,7 @@ export default function PendingPurchaseBoard({
   items,
   jobs = [],
   vendors,
+  canOperate = true,
   onGeneratePo,
 }: PendingPurchaseBoardProps) {
   const [selectedIds, setSelectedIds] = useState<number[]>([])
@@ -136,7 +138,7 @@ export default function PendingPurchaseBoard({
       <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 px-5 py-3">
         <button
           type="button"
-          disabled={selectedParts.length === 0 || vendors.length < 3}
+          disabled={!canOperate || selectedParts.length === 0 || vendors.length < 3}
           onClick={() => setCompareOpen(true)}
           className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:bg-slate-200 disabled:text-slate-500"
         >

@@ -1,5 +1,14 @@
-import { formatCurrency } from '../../lib/format'
-import type { PoStage, PurchaseOrder } from '../../types/procurement'
+import { useState } from 'react'
+import { formatCurrency, formatDateTime } from '../../lib/format'
+import type {
+  GoodsReceipt,
+  PoStage,
+  ProcessActionLog,
+  PurchaseOrder,
+  WorkGroupId,
+} from '../../types/procurement'
+import PoStageActionModal from './PoStageActionModal'
+import ReceiveGoodsModal from './ReceiveGoodsModal'
 import StatusBadge from './StatusBadge'
 
 const STAGES: Array<{ id: PoStage; title: string; hint: string }> = [
@@ -11,10 +20,45 @@ const STAGES: Array<{ id: PoStage; title: string; hint: string }> = [
 
 interface PurchaseOrderBoardProps {
   purchaseOrders: PurchaseOrder[]
-  onMarkDelivered: (poNumber: string) => void
+  workGroup: WorkGroupId
+  canSubmit?: boolean
+  canApprove?: boolean
+  canReceive?: boolean
+  onSubmitForApproval: (poNumber: string, submitted: ProcessActionLog, created?: ProcessActionLog) => void
+  onApprove: (poNumber: string, approved: ProcessActionLog) => void
+  onReceive: (poNumber: string, receipt: GoodsReceipt) => void
 }
 
-export default function PurchaseOrderBoard({ purchaseOrders, onMarkDelivered }: PurchaseOrderBoardProps) {
+function ActorLine({ label, log }: { label: string; log?: ProcessActionLog }) {
+  if (!log) {
+    return null
+  }
+
+  return (
+    <p className="text-[11px] leading-relaxed text-slate-500">
+      <span className="font-medium text-slate-600">{label}:</span> {log.actor.name}
+      {log.actor.position ? ` · ${log.actor.position}` : ''}
+      {log.actor.employeeId ? ` · ${log.actor.employeeId}` : ''}
+      <span className="block text-slate-400">
+        บันทึกโดย {log.recordedBy.name} ({log.recordedBy.workGroupLabel}) · {formatDateTime(log.at)}
+      </span>
+      {log.note ? <span className="block">{log.note}</span> : null}
+    </p>
+  )
+}
+
+export default function PurchaseOrderBoard({
+  purchaseOrders,
+  workGroup,
+  canSubmit = true,
+  canApprove = true,
+  canReceive = true,
+  onSubmitForApproval,
+  onApprove,
+  onReceive,
+}: PurchaseOrderBoardProps) {
+  const [actionPo, setActionPo] = useState<PurchaseOrder | null>(null)
+
   return (
     <section
       id="purchase-orders"
@@ -23,7 +67,7 @@ export default function PurchaseOrderBoard({ purchaseOrders, onMarkDelivered }: 
       <header className="border-b border-slate-100 px-5 py-4">
         <h2 className="text-sm font-semibold text-slate-900">กระบวนการเปิดใบสั่งซื้อ (ตามรายการสินค้า)</h2>
         <p className="mt-0.5 text-xs text-slate-500">
-          Item-based PO — เมื่อสถานะเป็นรับเข้าคลัง ระบบจะ Stock-In อัตโนมัติ
+          เดินทีละขั้น — บันทึกผู้จัดทำ, ผู้ขออนุมัติ, ผู้อนุมัติ และผู้รับของทุกครั้ง
         </p>
       </header>
 
@@ -60,25 +104,65 @@ export default function PurchaseOrderBoard({ purchaseOrders, onMarkDelivered }: 
                       {po.note ? <p className="mt-1 text-[11px] text-slate-400">{po.note}</p> : null}
                       <p className="mt-1 text-xs text-slate-500">{po.lines.length} รายการสินค้า</p>
                       <ul className="mt-2 space-y-1 text-xs text-slate-500">
-                        {po.lines.slice(0, 3).map((line) => (
-                          <li key={`${po.poNumber}-${line.partNo}`}>
-                            {line.partNo} × {line.qty}
+                        {po.lines.map((line) => (
+                          <li key={`${po.poNumber}-${line.partNo}-${line.jobId ?? 'none'}`}>
+                            {line.partNo} · {line.description} × {line.qty}
                             {line.jobId ? ` · ${line.jobId}` : ''}
                           </li>
                         ))}
                       </ul>
                       <p className="mt-2 text-sm font-medium text-teal-700">{formatCurrency(po.amount)}</p>
-                      {po.stage !== 'delivered' ? (
+
+                      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+                        <ActorLine label="ผู้จัดทำ" log={po.created} />
+                        <ActorLine label="ผู้ส่งขออนุมัติ" log={po.submitted} />
+                        <ActorLine label="ผู้อนุมัติ" log={po.approved} />
+                        {po.receipt ? (
+                          <p className="text-[11px] leading-relaxed text-slate-500">
+                            <span className="font-medium text-slate-600">ผู้รับของ:</span> {po.receipt.receiver.name}
+                            {po.receipt.receiver.position ? ` · ${po.receipt.receiver.position}` : ''}
+                            {po.receipt.receiver.employeeId ? ` · ${po.receipt.receiver.employeeId}` : ''}
+                            <span className="block text-slate-400">
+                              บันทึกโดย {po.receipt.recordedBy.name} ({po.receipt.recordedBy.workGroupLabel}) ·{' '}
+                              {formatDateTime(po.receipt.receivedAt)}
+                            </span>
+                            {po.receipt.qtyNote ? <span className="block">{po.receipt.qtyNote}</span> : null}
+                            {po.receipt.location ? <span className="block">สถานที่: {po.receipt.location}</span> : null}
+                            {po.receipt.note ? <span className="block">{po.receipt.note}</span> : null}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      {po.stage === 'draft' && canSubmit ? (
                         <button
                           type="button"
-                          onClick={() => onMarkDelivered(po.poNumber)}
+                          onClick={() => setActionPo(po)}
+                          className="mt-2 w-full rounded-lg bg-amber-50 px-2 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                        >
+                          ส่งขออนุมัติ
+                        </button>
+                      ) : null}
+                      {po.stage === 'pending_approval' && canApprove ? (
+                        <button
+                          type="button"
+                          onClick={() => setActionPo(po)}
+                          className="mt-2 w-full rounded-lg bg-sky-50 px-2 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100"
+                        >
+                          อนุมัติและส่งร้านค้า
+                        </button>
+                      ) : null}
+                      {po.stage === 'sent_to_vendor' && canReceive ? (
+                        <button
+                          type="button"
+                          onClick={() => setActionPo(po)}
                           className="mt-2 w-full rounded-lg bg-teal-50 px-2 py-1.5 text-xs font-medium text-teal-800 hover:bg-teal-100"
                         >
                           รับของเข้าคลัง (Delivered)
                         </button>
-                      ) : (
+                      ) : null}
+                      {po.stage === 'delivered' ? (
                         <p className="mt-2 text-[11px] text-emerald-700">Goods Receipt บันทึกแล้ว</p>
-                      )}
+                      ) : null}
                     </article>
                   ))
                 )}
@@ -87,6 +171,58 @@ export default function PurchaseOrderBoard({ purchaseOrders, onMarkDelivered }: 
           )
         })}
       </div>
+
+      {actionPo?.stage === 'draft' ? (
+        <PoStageActionModal
+          purchaseOrder={actionPo}
+          workGroup={workGroup}
+          title="ส่งขออนุมัติใบสั่งซื้อ"
+          actorTitle="ผู้ส่งขออนุมัติ"
+          actorPosition="เจ้าหน้าที่จัดซื้อ"
+          includeCreator={!actionPo.created}
+          onClose={() => setActionPo(null)}
+          onSubmit={({ actorLog, createdLog }) => {
+            onSubmitForApproval(actionPo.poNumber, actorLog, createdLog)
+            setActionPo(null)
+          }}
+        />
+      ) : null}
+
+      {actionPo?.stage === 'pending_approval' ? (
+        <PoStageActionModal
+          purchaseOrder={actionPo}
+          workGroup={workGroup}
+          title="อนุมัติใบสั่งซื้อและส่งร้านค้า"
+          actorTitle="ผู้อนุมัติ"
+          actorPosition="ผู้จัดการจัดซื้อ"
+          includeCreator={false}
+          onClose={() => setActionPo(null)}
+          onSubmit={({ actorLog }) => {
+            onApprove(actionPo.poNumber, actorLog)
+            setActionPo(null)
+          }}
+        />
+      ) : null}
+
+      {actionPo?.stage === 'sent_to_vendor' ? (
+        <ReceiveGoodsModal
+          delivery={{
+            id: actionPo.poNumber,
+            poNumber: actionPo.poNumber,
+            itemDetails: actionPo.lines
+              .map((line) => `${line.partNo} ${line.description} × ${line.qty}`)
+              .join(', '),
+            expectedDate: new Date().toISOString().slice(0, 10),
+            progress: 'ready',
+          }}
+          workGroup={workGroup}
+          onClose={() => setActionPo(null)}
+          onSubmit={(receipt) => {
+            onReceive(actionPo.poNumber, receipt)
+            setActionPo(null)
+          }}
+        />
+      ) : null}
     </section>
   )
 }

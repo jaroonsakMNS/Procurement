@@ -1,3 +1,24 @@
+export type WorkGroupId = 'purchasing' | 'accounting' | 'production' | 'sales'
+
+export type EmployeeRole = 'admin' | 'manager' | 'staff'
+
+export type PermissionAction = 'view' | 'operate' | 'approve' | 'receive' | 'manage_staff'
+
+export interface Employee {
+  id: string
+  employeeCode: string
+  name: string
+  email: string
+  password: string
+  phone: string
+  position: string
+  role: EmployeeRole
+  department: WorkGroupId
+  extraDepartments: WorkGroupId[]
+  permissions: PermissionAction[]
+  active: boolean
+}
+
 export type JobStatus = 'ready_for_po' | 'po_created'
 
 export type PoStage = 'draft' | 'pending_approval' | 'sent_to_vendor' | 'delivered'
@@ -55,6 +76,25 @@ export interface PurchaseOrderLine {
   unitPrice: number
 }
 
+export interface ProcessActor {
+  name: string
+  employeeId: string
+  department: string
+  position: string
+  phone: string
+}
+
+export interface ProcessActionLog {
+  at: string
+  actor: ProcessActor
+  recordedBy: {
+    name: string
+    workGroup: WorkGroupId
+    workGroupLabel: string
+  }
+  note: string
+}
+
 export interface PurchaseOrder {
   poNumber: string
   vendorId: string
@@ -64,6 +104,10 @@ export interface PurchaseOrder {
   lines: PurchaseOrderLine[]
   note?: string
   comparison?: VendorPriceComparison
+  created?: ProcessActionLog
+  submitted?: ProcessActionLog
+  approved?: ProcessActionLog
+  receipt?: GoodsReceipt
 }
 
 export interface VendorQuoteLine {
@@ -91,12 +135,37 @@ export interface PendingPayment {
   dueDate: string
 }
 
+export type GoodsCondition = 'complete' | 'partial' | 'damaged'
+
+export interface GoodsReceiptPerson {
+  name: string
+  employeeId: string
+  department: string
+  position: string
+  phone: string
+}
+
+export interface GoodsReceipt {
+  receivedAt: string
+  location: string
+  condition: GoodsCondition
+  qtyNote: string
+  note: string
+  receiver: GoodsReceiptPerson
+  recordedBy: {
+    name: string
+    workGroup: WorkGroupId
+    workGroupLabel: string
+  }
+}
+
 export interface PendingDelivery {
   id: string
   poNumber: string
   itemDetails: string
   expectedDate: string
   progress: DeliveryProgress
+  receipt?: GoodsReceipt
 }
 
 export interface JobEquipmentItem {
@@ -139,6 +208,26 @@ export interface PendingPurchaseItem {
 export interface CartLine {
   sku: string
   qty: number
+}
+
+export interface Customer {
+  id: string
+  code: string
+  name: string
+  contactPerson: string
+  phone: string
+  email: string
+  address: string
+  taxId: string
+  creditTermDays: number
+  active: boolean
+}
+
+export interface SalesStockItem {
+  sku: string
+  sellPrice: number
+  minSellQty: number
+  note?: string
 }
 
 export interface DashboardKpis {

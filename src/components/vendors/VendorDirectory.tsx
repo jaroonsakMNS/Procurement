@@ -5,11 +5,12 @@ import VendorFormModal from './VendorFormModal'
 
 interface VendorDirectoryProps {
   vendors: Vendor[]
+  canEdit?: boolean
   onSave: (vendor: Omit<Vendor, 'id'> & { id?: string }) => void
   onDelete: (vendorId: string) => void
 }
 
-export default function VendorDirectory({ vendors, onSave, onDelete }: VendorDirectoryProps) {
+export default function VendorDirectory({ vendors, canEdit = true, onSave, onDelete }: VendorDirectoryProps) {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Vendor | undefined>()
 
@@ -20,17 +21,19 @@ export default function VendorDirectory({ vendors, onSave, onDelete }: VendorDir
           <h2 className="text-sm font-semibold text-slate-900">ฐานข้อมูลร้านค้า (Vendor Database)</h2>
           <p className="mt-0.5 text-xs text-slate-500">เพิ่ม แก้ไข ลบ และดูรายละเอียดผู้ขายสำหรับสร้าง PO</p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setEditing(undefined)
-            setOpen(true)
-          }}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-xs font-medium text-white hover:bg-teal-700"
-        >
-          <Plus className="h-4 w-4" />
-          เพิ่มร้านค้า
-        </button>
+        {canEdit ? (
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(undefined)
+              setOpen(true)
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-xs font-medium text-white hover:bg-teal-700"
+          >
+            <Plus className="h-4 w-4" />
+            เพิ่มร้านค้า
+          </button>
+        ) : null}
       </header>
 
       <div className="overflow-x-auto">
@@ -57,6 +60,7 @@ export default function VendorDirectory({ vendors, onSave, onDelete }: VendorDir
                 <td className="max-w-xs px-4 py-3 text-slate-500">{vendor.address}</td>
                 <td className="px-4 py-3 font-mono text-xs">{vendor.taxId}</td>
                 <td className="px-4 py-3">
+                  {canEdit ? (
                   <div className="flex justify-end gap-1">
                     <button
                       type="button"
@@ -80,6 +84,9 @@ export default function VendorDirectory({ vendors, onSave, onDelete }: VendorDir
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
+                  ) : (
+                    <p className="text-right text-[11px] text-slate-400">ดูอย่างเดียว</p>
+                  )}
                 </td>
               </tr>
             ))}

@@ -66,7 +66,7 @@ export default function KpiCards({ kpis }: KpiCardsProps) {
         return (
           <article
             key={card.label}
-            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+            className="rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-sm backdrop-blur"
           >
             <div className="flex items-start justify-between">
               <div>

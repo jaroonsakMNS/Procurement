@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import DashboardLayout from './components/layout/DashboardLayout'
 import KpiCards from './components/dashboard/KpiCards'
 import VendorAssignedJobs from './components/dashboard/VendorAssignedJobs'
@@ -12,6 +12,12 @@ import StoreCatalog from './components/store/StoreCatalog'
 import PendingPurchaseBoard from './components/procurement/PendingPurchaseBoard'
 import JobEquipmentStatusReport from './components/reports/JobEquipmentStatusReport'
 import VendorDirectory from './components/vendors/VendorDirectory'
+import EmployeeDirectory from './components/employees/EmployeeDirectory'
+import CustomerDirectory from './components/sales/CustomerDirectory'
+import SalesDashboard from './components/sales/SalesDashboard'
+import SalesStockBoard from './components/sales/SalesStockBoard'
+import LoginPage from './components/auth/LoginPage'
+import { useAuth } from './context/AuthContext'
 import {
   computeKpis,
   jobEquipment as initialEquipment,
@@ -22,17 +28,25 @@ import {
 } from './data/mockData'
 import { inventoryItems as initialInventory, pendingPurchases as initialPending } from './data/inventory'
 import { vendors as initialVendors } from './data/vendors'
+import { customers as initialCustomers } from './data/customers'
+import { salesStock as initialSalesStock } from './data/salesStock'
 import { generateJobId, generatePoNumber, matchesQuery } from './lib/format'
+import { allowedDepartments, canSeeSection, hasPermission } from './lib/permissions'
 import type { DraftPart } from './lib/parseJobExcel'
 import type {
   CartLine,
+  GoodsReceipt,
   InventoryItem,
   JobEquipmentItem,
   PendingPurchaseItem,
+  ProcessActionLog,
   PurchaseOrder,
   PurchaseOrderLine,
   Vendor,
   VendorJob,
+  WorkGroupId,
+  Customer,
+  SalesStockItem,
 } from './types/procurement'
 
 function applyGoodsReceipt(inventory: InventoryItem[], lines: PurchaseOrderLine[]): InventoryItem[] {
@@ -64,6 +78,7 @@ function applyGoodsReceipt(inventory: InventoryItem[], lines: PurchaseOrderLine[
 }
 
 export default function App() {
+  const { currentUser, employees, logout, saveEmployee, deleteEmployee } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [jobs, setJobs] = useState<VendorJob[]>(initialJobs)
   const [equipment, setEquipment] = useState<JobEquipmentItem[]>(initialEquipment)
@@ -71,8 +86,31 @@ export default function App() {
   const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory)
   const [pendingItems, setPendingItems] = useState<PendingPurchaseItem[]>(initialPending)
   const [vendors, setVendors] = useState<Vendor[]>(initialVendors)
+  const [customers, setCustomers] = useState<Customer[]>(initialCustomers)
+  const [salesItems, setSalesItems] = useState<SalesStockItem[]>(initialSalesStock)
+  const [deliveries, setDeliveries] = useState(pendingDeliveries)
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [poNotice, setPoNotice] = useState<string | null>(null)
+  const [workGroup, setWorkGroup] = useState<WorkGroupId>('purchasing')
+
+  useEffect(() => {
+    if (!currentUser) {
+      return
+    }
+    const allowed = allowedDepartments(currentUser)
+    if (!allowed.includes(workGroup)) {
+      setWorkGroup(currentUser.department)
+    }
+  }, [currentUser, workGroup])
+
+  if (!currentUser) {
+    return <LoginPage />
+  }
+
+  const canOperate = hasPermission(currentUser, 'operate')
+  const canApprove = hasPermission(currentUser, 'approve')
+  const canReceive = hasPermission(currentUser, 'receive')
+  const sees = (sectionId: string) => canSeeSection(currentUser, workGroup, sectionId)
 
   const selectedJob = jobs.find((job) => job.jobId === selectedJobId) ?? null
   const selectedJobParts = equipment.filter((item) => item.jobId === selectedJobId)
@@ -83,12 +121,12 @@ export default function App() {
         jobs,
         purchaseOrders,
         pendingPayments,
-        pendingDeliveries,
+        deliveries,
         equipment,
         inventory,
         pendingItems,
       ),
-    [jobs, purchaseOrders, equipment, inventory, pendingItems],
+    [jobs, purchaseOrders, deliveries, equipment, inventory, pendingItems],
   )
 
   const filteredJobs = useMemo(
@@ -102,7 +140,18 @@ export default function App() {
   const filteredPurchaseOrders = useMemo(
     () =>
       purchaseOrders.filter((po) =>
-        matchesQuery(searchQuery, [po.poNumber, po.vendorName, po.note ?? '', po.stage]),
+        matchesQuery(searchQuery, [
+          po.poNumber,
+          po.vendorName,
+          po.note ?? '',
+          po.stage,
+          po.created?.actor.name ?? '',
+          po.submitted?.actor.name ?? '',
+          po.approved?.actor.name ?? '',
+          po.receipt?.receiver.name ?? '',
+          po.receipt?.recordedBy.name ?? '',
+          ...po.lines.flatMap((line) => [line.partNo, line.description, line.jobId ?? '']),
+        ]),
       ),
     [purchaseOrders, searchQuery],
   )
@@ -117,10 +166,22 @@ export default function App() {
 
   const filteredDeliveries = useMemo(
     () =>
-      pendingDeliveries.filter((item) =>
-        matchesQuery(searchQuery, [item.poNumber, item.itemDetails, item.expectedDate, item.progress]),
+      deliveries.filter((item) =>
+        matchesQuery(searchQuery, [
+          item.poNumber,
+          item.itemDetails,
+          item.expectedDate,
+          item.progress,
+          item.receipt?.receiver.name ?? '',
+          item.receipt?.receiver.employeeId ?? '',
+          item.receipt?.receiver.department ?? '',
+          item.receipt?.recordedBy.name ?? '',
+          item.receipt?.recordedBy.workGroupLabel ?? '',
+          item.receipt?.location ?? '',
+          item.receipt?.note ?? '',
+        ]),
       ),
-    [searchQuery],
+    [deliveries, searchQuery],
   )
 
   const filteredEquipment = useMemo(
@@ -131,6 +192,22 @@ export default function App() {
           matchesQuery(searchQuery, [item.jobId, item.mnsPartNo, item.partNo, item.description, item.status]),
       ),
     [equipment, searchQuery],
+  )
+
+  const filteredCustomers = useMemo(
+    () =>
+      customers.filter((item) =>
+        matchesQuery(searchQuery, [
+          item.code,
+          item.name,
+          item.contactPerson,
+          item.phone,
+          item.email,
+          item.taxId,
+          item.address,
+        ]),
+      ),
+    [customers, searchQuery],
   )
 
   function nextPendingId(list: PendingPurchaseItem[]) {
@@ -289,17 +366,70 @@ export default function App() {
     return `สร้าง ${poNumber} ให้ ${vendor.name} ตามราคาที่ชนะการเปรียบเทียบ (${selected.length} รายการ)`
   }
 
-  function handleMarkDelivered(poNumber: string) {
+  function handleSubmitPoForApproval(poNumber: string, submitted: ProcessActionLog, created?: ProcessActionLog) {
+    setPurchaseOrders((current) =>
+      current.map((item) =>
+        item.poNumber === poNumber && item.stage === 'draft'
+          ? {
+              ...item,
+              stage: 'pending_approval',
+              submitted,
+              created: created ?? item.created,
+            }
+          : item,
+      ),
+    )
+  }
+
+  function handleApprovePo(poNumber: string, approved: ProcessActionLog) {
+    setPurchaseOrders((current) =>
+      current.map((item) =>
+        item.poNumber === poNumber && item.stage === 'pending_approval'
+          ? { ...item, stage: 'sent_to_vendor', approved }
+          : item,
+      ),
+    )
+  }
+
+  function handleReceivePo(poNumber: string, receipt: GoodsReceipt) {
     const po = purchaseOrders.find((item) => item.poNumber === poNumber)
-    if (!po || po.stage === 'delivered') {
+    if (!po || po.stage !== 'sent_to_vendor') {
       return
     }
 
     setInventory((current) => applyGoodsReceipt(current, po.lines))
     setPurchaseOrders((current) =>
-      current.map((item) => (item.poNumber === poNumber ? { ...item, stage: 'delivered' } : item)),
+      current.map((item) => (item.poNumber === poNumber ? { ...item, stage: 'delivered', receipt } : item)),
     )
     setPendingItems((current) => current.filter((item) => item.poNumber !== poNumber))
+    setDeliveries((current) => {
+      const itemDetails = po.lines.map((line) => `${line.partNo} ${line.description} × ${line.qty}`).join(', ')
+      const matched = current.some((item) => item.poNumber === poNumber)
+
+      if (matched) {
+        return current.map((item) =>
+          item.poNumber === poNumber ? { ...item, progress: 'received', receipt } : item,
+        )
+      }
+
+      return [
+        {
+          id: `DEL-${poNumber}`,
+          poNumber,
+          itemDetails,
+          expectedDate: receipt.receivedAt.slice(0, 10),
+          progress: 'received',
+          receipt,
+        },
+        ...current,
+      ]
+    })
+  }
+
+  function handleReceiveGoods(id: string, receipt: GoodsReceipt) {
+    setDeliveries((current) =>
+      current.map((item) => (item.id === id ? { ...item, progress: 'received', receipt } : item)),
+    )
   }
 
   function handleRequisition(jobId: string, lines: CartLine[]) {
@@ -359,6 +489,23 @@ export default function App() {
     return `เบิกเข้าคลัง ${issuedCount} รายการ · ส่งขาด ${shortageCount} รายการไปรอจัดซื้อ`
   }
 
+  function handleSaveCustomer(customer: Omit<Customer, 'id'> & { id?: string }) {
+    setCustomers((current) => {
+      if (customer.id) {
+        return current.map((item) => (item.id === customer.id ? { ...item, ...customer, id: customer.id } : item))
+      }
+
+      const nextSeq =
+        current.reduce((max, item) => {
+          const n = Number(item.id.replace('CUS-', ''))
+          return Number.isFinite(n) ? Math.max(max, n) : max
+        }, 0) + 1
+      const nextId = `CUS-${String(nextSeq).padStart(3, '0')}`
+      const nextCode = customer.code.trim() || `C-2026-${String(nextSeq).padStart(3, '0')}`
+      return [...current, { ...customer, id: nextId, code: nextCode }]
+    })
+  }
+
   function handleSaveVendor(vendor: Omit<Vendor, 'id'> & { id?: string }) {
     setVendors((current) => {
       if (vendor.id) {
@@ -371,50 +518,125 @@ export default function App() {
   }
 
   return (
-    <DashboardLayout searchQuery={searchQuery} onSearchChange={setSearchQuery}>
+    <DashboardLayout
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      workGroup={workGroup}
+      onWorkGroupChange={setWorkGroup}
+      employee={currentUser}
+      onLogout={logout}
+    >
       <div className="mx-auto max-w-[90rem] space-y-6">
-        <div id="dashboard" className="scroll-mt-24">
-          <KpiCards kpis={kpis} />
-        </div>
+        {sees('dashboard') ? (
+          <div id="dashboard" className="scroll-mt-24">
+            {workGroup === 'sales' ? (
+              <SalesDashboard customers={customers} salesItems={salesItems} inventory={inventory} />
+            ) : (
+              <KpiCards kpis={kpis} />
+            )}
+          </div>
+        ) : null}
 
-        <JobEquipmentStatusReport
-          jobs={jobs}
-          equipment={equipment}
-          pendingItems={pendingItems}
-          purchaseOrders={purchaseOrders}
-          inventory={inventory}
-        />
+        {sees('employees') ? (
+          <EmployeeDirectory employees={employees} onSave={saveEmployee} onDelete={deleteEmployee} />
+        ) : null}
 
-        <InventoryDashboard items={inventory} />
-        <StoreCatalog items={inventory} jobs={jobs} onSubmit={handleRequisition} />
-        <PendingPurchaseBoard
-          items={pendingItems}
-          jobs={jobs}
-          vendors={vendors}
-          onGeneratePo={handleGeneratePo}
-        />
-        <VendorDirectory
-          vendors={vendors}
-          onSave={handleSaveVendor}
-          onDelete={(vendorId) => setVendors((current) => current.filter((item) => item.id !== vendorId))}
-        />
+        {sees('customers') ? (
+          <CustomerDirectory
+            customers={filteredCustomers}
+            canEdit={canOperate}
+            onSave={handleSaveCustomer}
+            onDelete={(customerId) => setCustomers((current) => current.filter((item) => item.id !== customerId))}
+          />
+        ) : null}
 
-        <JobOrderedEquipment items={filteredEquipment} />
+        {sees('sales-stock') ? (
+          <SalesStockBoard
+            inventory={inventory}
+            salesItems={salesItems}
+            canEdit={canOperate}
+            onAdd={(sku, sellPrice) =>
+              setSalesItems((current) =>
+                current.some((item) => item.sku === sku)
+                  ? current
+                  : [...current, { sku, sellPrice, minSellQty: 1 }],
+              )
+            }
+            onUpdate={(sku, patch) =>
+              setSalesItems((current) => current.map((item) => (item.sku === sku ? { ...item, ...patch } : item)))
+            }
+            onRemove={(sku) => setSalesItems((current) => current.filter((item) => item.sku !== sku))}
+          />
+        ) : null}
+
+        {sees('job-status-report') ? (
+          <JobEquipmentStatusReport
+            jobs={jobs}
+            equipment={equipment}
+            pendingItems={pendingItems}
+            purchaseOrders={purchaseOrders}
+            inventory={inventory}
+          />
+        ) : null}
+
+        {sees('inventory') ? <InventoryDashboard items={inventory} /> : null}
+        {sees('store') ? (
+          <StoreCatalog items={inventory} jobs={jobs} onSubmit={handleRequisition} />
+        ) : null}
+        {sees('pending-purchase') ? (
+          <PendingPurchaseBoard
+            items={pendingItems}
+            jobs={jobs}
+            vendors={vendors}
+            canOperate={canOperate}
+            onGeneratePo={handleGeneratePo}
+          />
+        ) : null}
+        {sees('vendors') ? (
+          <VendorDirectory
+            vendors={vendors}
+            canEdit={canOperate}
+            onSave={handleSaveVendor}
+            onDelete={(vendorId) => setVendors((current) => current.filter((item) => item.id !== vendorId))}
+          />
+        ) : null}
+
+        {sees('job-equipment') ? <JobOrderedEquipment items={filteredEquipment} /> : null}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <VendorAssignedJobs
-            jobs={filteredJobs}
-            suggestedJobId={generateJobId(jobs)}
-            existingJobIds={jobs.map((job) => job.jobId)}
-            onCreateJob={handleCreateJob}
-            onOpenJob={(job) => {
-              setPoNotice(null)
-              setSelectedJobId(job.jobId)
-            }}
-          />
-          <PurchaseOrderBoard purchaseOrders={filteredPurchaseOrders} onMarkDelivered={handleMarkDelivered} />
-          <PendingPayments payments={filteredPayments} />
-          <PendingDeliveries deliveries={filteredDeliveries} />
+          {sees('jobs') ? (
+            <VendorAssignedJobs
+              jobs={filteredJobs}
+              suggestedJobId={generateJobId(jobs)}
+              existingJobIds={jobs.map((job) => job.jobId)}
+              onCreateJob={handleCreateJob}
+              onOpenJob={(job) => {
+                setPoNotice(null)
+                setSelectedJobId(job.jobId)
+              }}
+            />
+          ) : null}
+          {sees('purchase-orders') ? (
+            <PurchaseOrderBoard
+              purchaseOrders={filteredPurchaseOrders}
+              workGroup={workGroup}
+              canSubmit={canOperate}
+              canApprove={canApprove}
+              canReceive={canReceive}
+              onSubmitForApproval={handleSubmitPoForApproval}
+              onApprove={handleApprovePo}
+              onReceive={handleReceivePo}
+            />
+          ) : null}
+          {sees('payments') ? <PendingPayments payments={filteredPayments} /> : null}
+          {sees('deliveries') ? (
+            <PendingDeliveries
+              deliveries={filteredDeliveries}
+              workGroup={workGroup}
+              canReceive={canReceive}
+              onReceive={handleReceiveGoods}
+            />
+          ) : null}
         </div>
       </div>
 

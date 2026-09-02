@@ -16,7 +16,16 @@ body,
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: #f8fafc;
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
+  background-color: #f1f5f9;
+  background-image:
+    radial-gradient(1200px 420px at 0% -10%, rgba(14, 165, 233, 0.12), transparent 55%),
+    radial-gradient(900px 360px at 100% 0%, rgba(13, 148, 136, 0.1), transparent 50%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: #bae6fd;
+  color: #0f172a;
 }
